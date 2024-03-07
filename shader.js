@@ -89,6 +89,11 @@ ShaderProgram.prototype.setUniformMat4 = function( unif, mat )
 	gl.uniformMatrix4fv( this.uniformLocations[ unif ], false, mat );
 };
 ShaderProgram.prototype.setUniform1i = function( unif, value )
+{//TODO
+	gl.uniform1i( this.uniformLocations[ unif ], value );
+};
+
+ShaderProgram.prototype.setUniformf1 = function( unif, value )
 {
 	gl.uniform1i( this.uniformLocations[ unif ], value );
 };

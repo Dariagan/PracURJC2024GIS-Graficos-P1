@@ -59,10 +59,7 @@
         precision mediump float;
         layout (location = 0) in vec3 aPos;
         layout (location = 1) in vec3 aNormal;
-        layout (location = 2) in vec2 aTexCoord;
-
-
-        
+        layout (location = 2) in vec2 aTexCoord;        
     
         uniform UBO {
             mat4 projection;
@@ -93,6 +90,9 @@
         in vec3 normal;
         in vec3 fragPos;
 
+        uniform float ambientStrength;//0.1
+        uniform float specularStrength;//0.8
+
         uniform vec3 lightPos;
         uniform vec3 viewPos;
         uniform vec3 objectColor;
@@ -100,11 +100,8 @@
 
         void main()
         {
-            //vec3 lightColor = vec3(1.0, 1.0, 1.0);
             vec3 norm = normalize(normal);
 
-            // ambient
-            float ambientStrength = 0.1;
             vec3 ambient = ambientStrength * lightColor;
 
             // diffuse
@@ -113,7 +110,7 @@
             vec3 diffuse = diff * lightColor;
 
             // specular
-            float specularStrength = 0.8;
+            
             vec3 viewDir = normalize(viewPos - fragPos);
             vec3 reflectDir = reflect(-lightDir, norm);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
@@ -129,6 +126,14 @@
 <body>
     <canvas id="myCanvas" width="500" height="500"></canvas>
     <script type="text/javascript">
+        function clamp(num, min, max) {
+        return num <= min 
+            ? min 
+            : num >= max 
+            ? max 
+            : num
+        }
+
         var gl = createContext("myCanvas");
         //=====================================================
         // ============== Creation geomtry cube ===============
@@ -164,11 +169,6 @@
         // Unbind the VAO
         gl.bindVertexArray(null);
 
-        
-
-
-
-
         var shaderProgram = new ShaderProgram( );
         shaderProgram.createVertexShader(
           document.getElementById( "shader-vs" ).text
@@ -181,12 +181,13 @@
 
         shaderProgram.autocatching( );
 
-
-
         shaderProgram.createUniform("model");
         shaderProgram.createUniform("lightPos");
         shaderProgram.createUniform("viewPos");
         shaderProgram.createUniform("objectColor");
+        shaderProgram.createUniform("ambientStrength");
+        shaderProgram.createUniform("specularStrength");
+
 
         // Shaders para la luz
         var shaderProgramL = new ShaderProgram( );
@@ -245,8 +246,10 @@
         index = gl.getUniformBlockIndex(shaderProgramL.mCompiledShader, "UBO");
         gl.uniformBlockBinding(shaderProgramL.mCompiledShader, index, 0);
 
-
-
+        var ambientStrength = 0.1;
+        var specularStrength = 0.8;
+        var objectColor = [1.0, 0.5, 0.5];
+        var lightColor = [1.0, 1.0, 1.0];
 
         //*********** render Func *****************
         function renderFunc(time) {
@@ -256,9 +259,6 @@
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.enable(gl.DEPTH_TEST);
             shaderProgram.bind();
-
-
-           
 
             // =========== Creation matrices cameras ==============
             var cameraPosX = 0.0;
@@ -293,17 +293,20 @@
             )
             shaderProgram.setUniformMat4("model", model);
             shaderProgram.setUniform3f("viewPos", cameraPosX, cameraPosY, -cameraPosZ);
+        
             
             var lightPosX = 3.0;
             var lightPosY = 1.0;
             var lightPosZ = 10.0;
             var lightPos = [lightPosX, lightPosY, lightPosZ];
             shaderProgram.setUniform3f("lightPos", lightPosX, lightPosY, lightPosZ);
-            shaderProgram.setUniform3f("lightColor", 1.0, 1.0, 1.0);
+            shaderProgram.setUniform3f("lightColor", lightColor[0], lightColor[1], lightColor[2]);
 
+            // shaderProgram.setUniform("ambientStrength", ambientStrength);
+            // shaderProgram.setUniform("specularStrength", specularStrength);
             
             //***** drawing first square ********
-            shaderProgram.setUniform3f("objectColor", 1.0, 0.5,  0.5);
+            shaderProgram.setUniform3f("objectColor", objectColor[0], objectColor[1],  objectColor[2]);
             gl.bindVertexArray(VAO);
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
 
@@ -331,6 +334,7 @@
                 0
             )
 
+
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
 
             gl.bindVertexArray(null);
@@ -339,23 +343,79 @@
         }
 
         document.addEventListener('keydown', function (event) {
-            /*
+            /*  
+                https://upload.wikimedia.org/wikipedia/commons/1/1b/ASCII-Table-wide.svg
                 65 => A
                 68 => D
                 83 => S
                 87 => W
                 81 => Q
                 69 => E
+
+""
     
+                //cámara
                 37 => Flecha izq
                 39 => Fecha drcha
                 38 => Fecha arriba
                 40 => Fecha abajo
-    
             */
-            if (event.keyCode == 65) // A
-            {
+            switch (event.keyCode){
+                
+
+                case 73://I
+                    ambientStrength += 0.1;
+                    ambientStrength = Math.min(ambientStrength, 1.0);
+                break;
+                case 75://K
+                    ambientStrength -= 0.1;
+                    ambientStrength = Math.max(ambientStrength, 0.0);
+                break;
+                case 79://O
+                    specularStrength += 0.1;
+                    specularStrength = Math.min(specularStrength, 1.0);
+                break;
+                case 76://L
+                    specularStrength -= 0.1;
+                    specularStrength = Math.max(specularStrength, 0.0);
+                break;
+                case 89://Y
+                    //amarillo
+                    objectColor[0] = 0.8;
+                    objectColor[1] = 0.8;
+                    objectColor[2] = 0.0;
+                break;
+                case 82://R
+                    //rojo
+                    objectColor[0] = 1.0;
+                    objectColor[1] = 0.0;
+                    objectColor[2] = 0.0;
+                break;
+                case 48://0
+                    //blanco
+                    objectColor[0] = 1.0;
+                    objectColor[1] = 1.0;
+                    objectColor[2] = 1.0;
+                break;
+                
+                case 86://v
+                    //luz verde
+                    lightColor[0] = 0.0;
+                    lightColor[1] = 1.0;
+                    lightColor[2] = 0.0;
+                break;
+
+                case 66://b
+                    //luz blanca
+                    lightColor[0] = 1.0;
+                    lightColor[1] = 1.0;
+                    lightColor[2] = 1.0;
+                break;
+                
+                default:
+
             }
+
         });
         
 
