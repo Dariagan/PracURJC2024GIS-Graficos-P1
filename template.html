@@ -223,7 +223,6 @@
             uboVariablesNames
         );
 
-
         //Obtenemos los offsets
         const uboVariablesOffset = gl.getActiveUniforms(
             shaderProgram.mCompiledShader,
@@ -245,10 +244,16 @@
         index = gl.getUniformBlockIndex(shaderProgramL.mCompiledShader, "UBO");
         gl.uniformBlockBinding(shaderProgramL.mCompiledShader, index, 0);
 
+        //cameras vectors
+        var cameraTarget = [0.0, 0.0, 0.0];
 
+        var cameraPosX = 0.0;
+        var cameraPosY = 0.0;
+        var cameraPosZ = -20.0;
 
+        var rotationX;
 
-        //*********** render Func *****************
+        //====================== Render func ===================================
         function renderFunc(time) {
             gl.viewport(0, 0, 500, 500);
             gl.clearColor(0.0, 0.5, 0.5, 1.0);
@@ -258,17 +263,18 @@
             shaderProgram.bind();
 
 
-           
+            var cameraPos = [cameraPosX, cameraPosY, cameraPosZ];
+
 
             // =========== Creation matrices cameras ==============
-            var cameraPosX = 0.0;
-            var cameraPosY = 0.0;
-            var cameraPosZ = -20.0;
-            var cameraPos = [cameraPosX, cameraPosY, cameraPosZ];
+
+           
+
             var proj = mat4.create();
             mat4.perspective(proj, Math.radians(60.0), 1.0, 0.001, 1000.0);
 
             var view = mat4.create();
+
             mat4.translate(view, view, cameraPos);
 
             time *= 0.001; // to seconds
@@ -353,9 +359,24 @@
                 40 => Fecha abajo
     
             */
-            if (event.keyCode == 65) // A
-            {
-            }
+           switch (event.keyCode) {
+                case 37 :
+                    cameraPosX -= 0.2;
+                    break;
+                case 39 :
+                    cameraPosX += 0.2;
+                    break;
+                case 40 :
+                    cameraPosY -= 0.2;
+                    break;
+                case 38 :
+                    cameraPosY += 0.2;
+                    break;
+                default :
+                    break;
+
+           }
+            
         });
         
 
