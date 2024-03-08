@@ -93,9 +93,9 @@ ShaderProgram.prototype.setUniform1i = function( unif, value )
 	gl.uniform1i( this.uniformLocations[ unif ], value );
 };
 
-ShaderProgram.prototype.setUniformf1 = function( unif, value )
+ShaderProgram.prototype.setUniform1f = function( unif, value )
 {
-	gl.uniform1i( this.uniformLocations[ unif ], value );
+	gl.uniform1f( this.uniformLocations[ unif ], value );
 };
 
 ShaderProgram.prototype.autocatching = function( )

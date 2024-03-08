@@ -29,6 +29,7 @@
             uniform UBO {
                 mat4 projection;
                 mat4 view;
+                vec3 lightColor;
             };
 
             uniform mat4 model;
@@ -47,11 +48,15 @@
             precision mediump float;
     
             out vec4 fragColor;
+
+            uniform UBO {
+                mat4 projection;
+                mat4 view;
+                vec3 lightColor;
+            };
     
             void main()
-            {
-                vec3 lightColor = vec3(0.0, 1.0, 0.0);
-                
+            {                
                 fragColor = vec4(lightColor, 1.0);
             }
     </script>
@@ -64,6 +69,7 @@
         uniform UBO {
             mat4 projection;
             mat4 view;
+            vec3 lightColor;
         };
     
         uniform mat4 model;
@@ -71,7 +77,6 @@
         out vec3 normal;
         out vec3 fragPos;
         
-    
         void main()
         {
             fragPos = vec3(model * vec4(aPos, 1.0));
@@ -93,11 +98,19 @@
         uniform float ambientStrength;//0.1
         uniform float specularStrength;//0.8
 
+        uniform vec3 spotLightDirection;
+        uniform float spotLightOpeningAngle;
+        uniform vec3 spotLightPosition;
+
         uniform vec3 lightPos;
         uniform vec3 viewPos;
         uniform vec3 objectColor;
-        uniform vec3 lightColor;
-
+        uniform UBO {
+            mat4 projection;
+            mat4 view;
+            vec3 lightColor;
+        };
+    
         void main()
         {
             vec3 norm = normalize(normal);
@@ -109,14 +122,27 @@
             float diff = max(dot(norm, lightDir), 0.0);
             vec3 diffuse = diff * lightColor;
 
-            // specular
-            
+            // specular            
             vec3 viewDir = normalize(viewPos - fragPos);
             vec3 reflectDir = reflect(-lightDir, norm);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
             vec3 specular = specularStrength * spec * lightColor;
 
-            vec3 result = (ambient + diffuse + specular) * objectColor;
+            vec3 L = normalize(spotLightPosition - fragPos);
+
+            float spotLight_fdir;
+            
+            float product = dot(-L, spotLightDirection);
+            float cosine = cos(spotLightOpeningAngle);
+
+            if (cosine < product){
+                spotLight_fdir = pow((product- cosine)/(1.0 - cosine), 5.0);
+            }
+            else spotLight_fdir = 0.0;
+
+            float spotLight_fdistance;
+
+            vec3 result = (ambient + spotLight_fdir*(diffuse + specular)) * objectColor;
             fragColor = vec4(result, 1.0);
         }
 </script>
@@ -127,11 +153,11 @@
     <canvas id="myCanvas" width="500" height="500"></canvas>
     <script type="text/javascript">
         function clamp(num, min, max) {
-        return num <= min 
-            ? min 
-            : num >= max 
-            ? max 
-            : num
+            return num <= min 
+                ? min 
+                : num >= max 
+                ? max 
+                : num
         }
 
         var gl = createContext("myCanvas");
@@ -185,9 +211,8 @@
         shaderProgram.createUniform("lightPos");
         shaderProgram.createUniform("viewPos");
         shaderProgram.createUniform("objectColor");
-        shaderProgram.createUniform("ambientStrength");
-        shaderProgram.createUniform("specularStrength");
-
+        shaderProgram.createUniform("ambientStrength")
+        shaderProgram.createUniform("specularStrength")
 
         // Shaders para la luz
         var shaderProgramL = new ShaderProgram( );
@@ -216,14 +241,13 @@
 
         gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, uboBuffer);
 
-        const uboVariablesNames = [ "projection", "view"];
+        const uboVariablesNames = [ "projection", "view", "lightColor"];
 
         //Obtenemos los ids
         const uboVariablesIndices = gl.getUniformIndices(
             shaderProgram.mCompiledShader,
             uboVariablesNames
         );
-
 
         //Obtenemos los offsets
         const uboVariablesOffset = gl.getActiveUniforms(
@@ -248,8 +272,16 @@
 
         var ambientStrength = 0.1;
         var specularStrength = 0.8;
-        var objectColor = [1.0, 0.5, 0.5];
-        var lightColor = [1.0, 1.0, 1.0];
+        var objectColor = new Float32Array([1.0, 0.5, 0.5]);
+        var lightColor = new Float32Array([1.0, 1.0, 1.0]);
+
+        shaderProgram.createUniform("spotLightPosition");
+        shaderProgram.createUniform("spotLightDirection");
+        shaderProgram.createUniform("spotLightOpeningAngle");
+
+        var spotLightPosition = new Float32Array([0,0,0]);
+        var spotLightDirection = new Float32Array([0,0,0]);
+        var spotLightOpeningAngle = Math.radians(30.0); 
 
         //*********** render Func *****************
         function renderFunc(time) {
@@ -291,28 +323,36 @@
                 view,
                 0
             )
+            gl.bufferSubData(
+                gl.UNIFORM_BUFFER,
+                uboVariablesInfo["lightColor"].offset,
+                lightColor,
+                0
+            )
             shaderProgram.setUniformMat4("model", model);
             shaderProgram.setUniform3f("viewPos", cameraPosX, cameraPosY, -cameraPosZ);
-        
             
             var lightPosX = 3.0;
             var lightPosY = 1.0;
             var lightPosZ = 10.0;
             var lightPos = [lightPosX, lightPosY, lightPosZ];
             shaderProgram.setUniform3f("lightPos", lightPosX, lightPosY, lightPosZ);
-            shaderProgram.setUniform3f("lightColor", lightColor[0], lightColor[1], lightColor[2]);
 
-            // shaderProgram.setUniform("ambientStrength", ambientStrength);
-            // shaderProgram.setUniform("specularStrength", specularStrength);
+            shaderProgram.setUniform1f("ambientStrength", ambientStrength);
+            shaderProgram.setUniform1f("specularStrength", specularStrength);
+
+            shaderProgram.setUniform3f("spotLightDirection", spotLightDirection);
+            shaderProgram.setUniform3f("spotLightPosition", spotLightPosition);
+            shaderProgram.setUniform1f("spotLightOpeningAngle", spotLightOpeningAngle)
+
             
             //***** drawing first square ********
             shaderProgram.setUniform3f("objectColor", objectColor[0], objectColor[1],  objectColor[2]);
             gl.bindVertexArray(VAO);
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
 
-            shaderProgramL.bind();
-
             
+            shaderProgramL.bind();
             
             // creating and drawing second squared (indicates light)
             var modelLight = mat4.create();
@@ -334,7 +374,6 @@
                 0
             )
 
-
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
 
             gl.bindVertexArray(null);
@@ -351,9 +390,7 @@
                 87 => W
                 81 => Q
                 69 => E
-
 ""
-    
                 //cámara
                 37 => Flecha izq
                 39 => Fecha drcha
@@ -361,23 +398,26 @@
                 40 => Fecha abajo
             */
             switch (event.keyCode){
-                
 
                 case 73://I
                     ambientStrength += 0.1;
                     ambientStrength = Math.min(ambientStrength, 1.0);
+                    console.log("ambient strength=" + ambientStrength);
                 break;
                 case 75://K
                     ambientStrength -= 0.1;
                     ambientStrength = Math.max(ambientStrength, 0.0);
+                    console.log("ambient strength=" + ambientStrength);
                 break;
                 case 79://O
                     specularStrength += 0.1;
                     specularStrength = Math.min(specularStrength, 1.0);
+                    console.log("specular strength=" + specularStrength);
                 break;
                 case 76://L
                     specularStrength -= 0.1;
                     specularStrength = Math.max(specularStrength, 0.0);
+                    console.log("specular strength=" + specularStrength);
                 break;
                 case 89://Y
                     //amarillo
@@ -417,10 +457,6 @@
             }
 
         });
-        
-
-
-
         renderFunc(0.0);
 
     </script>
