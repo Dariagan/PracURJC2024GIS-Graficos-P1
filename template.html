@@ -246,15 +246,27 @@
 
         //cameras vectors
         var cameraTarget = [0.0, 0.0, 0.0];
+        var radius = 20.0;
+        var speed = 0.1;
 
-        var cameraPosX = 0.0;
-        var cameraPosY = 0.0;
-        var cameraPosZ = -20.0;
 
-        var rotationX;
+        
+
+        var rotationX = 0.0;
+        var rotationY = 0.0;
+        var rotationZ = 0.0;
+       
+        var camX = 0.0;
+        var camY = 0.0;
+        var camZ =  radius;
+
+        
+            
 
         //====================== Render func ===================================
         function renderFunc(time) {
+            time *= 0.001; // to seconds
+
             gl.viewport(0, 0, 500, 500);
             gl.clearColor(0.0, 0.5, 0.5, 1.0);
 
@@ -263,21 +275,28 @@
             shaderProgram.bind();
 
 
-            var cameraPos = [cameraPosX, cameraPosY, cameraPosZ];
+           
 
+        
 
             // =========== Creation matrices cameras ==============
-
-           
+          
 
             var proj = mat4.create();
             mat4.perspective(proj, Math.radians(60.0), 1.0, 0.001, 1000.0);
 
             var view = mat4.create();
+            //var cameraPos = [cameraPosX, cameraPosY, cameraPosZ];
 
-            mat4.translate(view, view, cameraPos);
+            var cameraPos = [camX,camY, camZ];
+            var cameraFront = [0.0, 0.0, 0.0];
+            var cameraUp = [0.0, 1.0, 0.0];
+            //var cameraPos = [camPosX, camPosY, camPosZ];
 
-            time *= 0.001; // to seconds
+            mat4.lookAt(view, cameraPos, cameraFront, cameraUp);
+
+            //mat4.translate(view, view, cameraPos);
+
             var angle = time * 100.0;
 
             var model = mat4.create();
@@ -298,7 +317,7 @@
                 0
             )
             shaderProgram.setUniformMat4("model", model);
-            shaderProgram.setUniform3f("viewPos", cameraPosX, cameraPosY, -cameraPosZ);
+            shaderProgram.setUniform3f("viewPos", camX, camY, -camZ);
             
             var lightPosX = 3.0;
             var lightPosY = 1.0;
@@ -343,7 +362,7 @@
 
             requestAnimationFrame(renderFunc);
         }
-
+        
         document.addEventListener('keydown', function (event) {
             /*
                 65 => A
@@ -359,23 +378,64 @@
                 40 => Fecha abajo
     
             */
-           switch (event.keyCode) {
+           if(event.shiftKey) {
+            switch (event.keyCode) {
                 case 37 :
-                    cameraPosX -= 0.2;
+                rotationX -= speed;
+                rotationZ -= speed;
+                camX = Math.sin(rotationX) * radius;
+                camZ = Math.cos(rotationZ) * radius;
+
                     break;
                 case 39 :
-                    cameraPosX += 0.2;
+                rotationX += speed;
+                rotationZ += speed;
+                camX = Math.sin(rotationX) * radius;
+                camZ = Math.cos(rotationZ) * radius;
                     break;
                 case 40 :
-                    cameraPosY -= 0.2;
+                rotationY -= speed;
+                rotationZ -= speed;
+                camY = Math.sin(rotationY) * radius;
+                camZ = Math.cos(rotationZ) * radius;
+
                     break;
                 case 38 :
-                    cameraPosY += 0.2;
+                rotationY += speed;
+                rotationZ += speed;
+                camY = Math.sin(rotationY) * radius;
+                camZ = Math.cos(rotationZ) * radius;
+
                     break;
+                               
                 default :
                     break;
 
            }
+           }
+           else 
+           {
+           
+            switch (event.keyCode) {
+                case 37 :
+                    camX -= speed;
+                    break;
+                case 39 :
+                    camX +=speed;
+                    break;
+                case 40 :
+                    camY -= speed;
+                    break;
+                case 38 :
+                    camY += speed;
+                    break;
+                               
+                default :
+                    break;
+
+           }
+           }
+           
             
         });
         
