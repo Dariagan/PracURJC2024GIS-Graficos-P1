@@ -223,7 +223,6 @@
             uboVariablesNames
         );
 
-
         //Obtenemos los offsets
         const uboVariablesOffset = gl.getActiveUniforms(
             shaderProgram.mCompiledShader,
@@ -245,11 +244,39 @@
         index = gl.getUniformBlockIndex(shaderProgramL.mCompiledShader, "UBO");
         gl.uniformBlockBinding(shaderProgramL.mCompiledShader, index, 0);
 
+        // ***** CAMERA DATAS *****
+        // OTHER VALUES
+        var radius = 20.0; // in meter
+        var sensibility = 0.5
+        var cameraPosSpeed = sensibility; // in meter per tick
+        var cameraRotSpeed = sensibility * 4; // in meter per tick
 
-
-
-        //*********** render Func *****************
+        var yaw = - 90.0; // in degrees
+        var pitch = 0.0; // in degrees
+        var lastMouseX = 250; // middle of the canva x value
+        var lastMouseY = 250; // middle of the canva y value
+        // CAMERA POSITION VALUES
+        var camPosX = 0.0;
+        var camPosY = 0.0;
+        var camPosZ = radius;
+        // CAMERA ROTATION VALUES
+        var camRotX = 0.0;
+        var camRotY = 0.0;
+        var camRotZ = -1.0;
+        // CAMERA UP VALUES
+        var camUpX = 0.0;
+        var camUpY = 1.0;
+        var camUpZ = 0.0;
+        // VECTORS OF LOOKAT MATRIX
+        var cameraPos   = [ camPosX, camPosY, camPosZ ];
+        var cameraFront = [ camRotX, camRotY, camRotZ ];
+        var cameraUp    = [ camUpX , camUpY , camUpZ  ];
+        // =================================
+        // ========== RENDER FUNC ==========
+        // =================================
         function renderFunc(time) {
+            time *= 0.001; // to seconds
+
             gl.viewport(0, 0, 500, 500);
             gl.clearColor(0.0, 0.5, 0.5, 1.0);
 
@@ -260,24 +287,31 @@
 
            
 
-            // =========== Creation matrices cameras ==============
-            var cameraPosX = 0.0;
-            var cameraPosY = 0.0;
-            var cameraPosZ = -20.0;
-            var cameraPos = [cameraPosX, cameraPosY, cameraPosZ];
+        
+
+            // ***** CAMERA MATRICES *****
+            // PROJ MATRIX
             var proj = mat4.create();
             mat4.perspective(proj, Math.radians(60.0), 1.0, 0.001, 1000.0);
+            // VIEW MATRIX
+            var yawRadians = Math.radians(yaw);
+            var pitchRadians = Math.radians(pitch);
+            var cosYaw = Math.cos(yawRadians);
+            var sinYaw = Math.sin(yawRadians);
+            var cosPitch = Math.cos(pitchRadians);
+            var sinPitch = Math.sin(pitchRadians);
+           
+            var direction = vec3.create();
+            direction[0] = cosYaw * cosPitch;
+            direction[1] = sinPitch;
+            direction[2] = sinYaw * cosPitch;
+            vec3.normalize(cameraFront, direction);
 
+            var camPosFront = vec3.create();
+            vec3.add(camPosFront, cameraPos, cameraFront);
+           
             var view = mat4.create();
-            mat4.translate(view, view, cameraPos);
-
-            time *= 0.001; // to seconds
-            var angle = time * 100.0;
-
-            var model = mat4.create();
-            mat4.translate(model, model, [0.0, 0.0, 0.0]);
-            mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
-
+            mat4.lookAt(view, cameraPos, camPosFront, cameraUp);
 
             gl.bufferSubData(
                 gl.UNIFORM_BUFFER,
@@ -291,9 +325,18 @@
                 view,
                 0
             )
+            // ***** FIRST SQUARE *****
+            // MODEL MATRIX
+            var angle = time * 100.0;
+            var model = mat4.create();
+            mat4.translate(model, model, [0.0, 0.0, 0.0]);
+            mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
+
             shaderProgram.setUniformMat4("model", model);
-            shaderProgram.setUniform3f("viewPos", cameraPosX, cameraPosY, -cameraPosZ);
-            
+            shaderProgram.setUniform3f("viewPos", camPosX, camPosY, -camPosZ);
+            shaderProgram.setUniform3f("objectColor", 1.0, 0.5,  0.5);
+
+            // ***** LIGHT *****
             var lightPosX = 3.0;
             var lightPosY = 1.0;
             var lightPosZ = 10.0;
@@ -302,22 +345,12 @@
             shaderProgram.setUniform3f("lightColor", 1.0, 1.0, 1.0);
 
             
-            //***** drawing first square ********
-            shaderProgram.setUniform3f("objectColor", 1.0, 0.5,  0.5);
+            // ***** DRAWING FIRST SHADERS ******
             gl.bindVertexArray(VAO);
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
 
+            // ***** SECOND SQUARE (indicates light) *****
             shaderProgramL.bind();
-
-            
-            
-            // creating and drawing second squared (indicates light)
-            var modelLight = mat4.create();
-            mat4.translate (modelLight, modelLight, lightPos);
-            mat4.scale(modelLight, modelLight, [0.25, 0.25, 0.25]);
-            mat4.rotate(modelLight, modelLight, Math.radians(angle), [-1.0, -0.5, -1.0]);
-
-            shaderProgramL.setUniformMat4("model", modelLight);
             gl.bufferSubData(
                 gl.UNIFORM_BUFFER,
                 uboVariablesInfo["projection"].offset,
@@ -331,13 +364,23 @@
                 0
             )
 
+            // MODEL MATRIX
+            var modelLight = mat4.create();
+            mat4.translate (modelLight, modelLight, lightPos);
+            mat4.scale(modelLight, modelLight, [0.25, 0.25, 0.25]);
+            mat4.rotate(modelLight, modelLight, Math.radians(angle), [-1.0, -0.5, -1.0]);
+
+            shaderProgramL.setUniformMat4("model", modelLight);
+          
+            //***** DRAWING SECOND SHADERS ******
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
 
-            gl.bindVertexArray(null);
 
+
+            gl.bindVertexArray(null);
             requestAnimationFrame(renderFunc);
         }
-
+        
         document.addEventListener('keydown', function (event) {
             /*
                 65 => A
@@ -353,8 +396,82 @@
                 40 => Fecha abajo
     
             */
-            if (event.keyCode == 65) // A
-            {
+           if(event.shiftKey) {
+            switch (event.keyCode) {
+                case 38 : // rotating up
+                pitch += cameraRotSpeed
+                if( pitch > 89.0) {
+                    pitch = 89.0;
+                }
+
+                    break;
+                case 40 : // rotating down
+                pitch -= cameraRotSpeed
+                if( pitch < -89.0) {
+                    pitch = -89.0;
+                }
+                    break;
+                case 37 : // rotating left
+                    yaw -= cameraRotSpeed;
+
+                    break;
+                case 39 : // rotating down
+                    yaw += cameraRotSpeed;
+
+                    break;             
+                default :
+                    break;
+
+           }
+           }
+           else 
+           {
+                switch (event.keyCode) {
+                    case 38 : // going up
+                    var cameraUpSpeed = [
+                        cameraUp[0] * cameraPosSpeed,
+                        cameraUp[1] * cameraPosSpeed,
+                        cameraUp[2] * cameraPosSpeed,
+                    ];
+                    vec3.add(cameraPos, cameraPos, cameraUpSpeed )     
+                    console.log(" new camera position ", cameraPos)
+                
+                        break;
+                    case 40 : // going down
+                    var cameraUpSpeed = [
+                        cameraUp[0] * cameraPosSpeed,
+                        cameraUp[1] * cameraPosSpeed,
+                        cameraUp[2] * cameraPosSpeed,
+                    ];
+                    vec3.subtract(cameraPos, cameraPos, cameraUpSpeed )     
+                    console.log(" new camera position ", cameraPos)          
+                        break;
+                    case 37 : // going left
+                        var crossProduct = vec3.create();
+                        vec3.cross(crossProduct, cameraFront, cameraUp);
+                        vec3.normalize(crossProduct, crossProduct);
+                        crossProduct[0] *= cameraPosSpeed;
+                        crossProduct[1] *= cameraPosSpeed;
+                        crossProduct[2] *= cameraPosSpeed;
+                        vec3.subtract(cameraPos, cameraPos, crossProduct);
+                        console.log(" new camera position ", cameraPos)          
+
+                        break;
+                    case 39 : // going right
+                    var crossProduct = vec3.create();
+                        vec3.cross(crossProduct, cameraFront, cameraUp);
+                        vec3.normalize(crossProduct, crossProduct);
+                        crossProduct[0] *= cameraPosSpeed;
+                        crossProduct[1] *= cameraPosSpeed;
+                        crossProduct[2] *= cameraPosSpeed;
+                        vec3.add(cameraPos, cameraPos, crossProduct);
+                        console.log(" new camera position ", cameraPos)          
+
+                        break;
+
+                    default :
+                        break;
+                }
             }
         });
         
