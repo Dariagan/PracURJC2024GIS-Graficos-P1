@@ -29,6 +29,7 @@
             uniform UBO {
                 mat4 projection;
                 mat4 view;
+                vec3 lightColor;
             };
 
             uniform mat4 model;
@@ -47,11 +48,14 @@
             precision mediump float;
     
             out vec4 fragColor;
-    
+
+            uniform UBO {
+                mat4 projection;
+                mat4 view;
+                vec3 lightColor;
+            };
             void main()
             {
-                vec3 lightColor = vec3(0.0, 1.0, 0.0);
-                
                 fragColor = vec4(lightColor, 1.0);
             }
     </script>
@@ -60,20 +64,17 @@
         layout (location = 0) in vec3 aPos;
         layout (location = 1) in vec3 aNormal;
         layout (location = 2) in vec2 aTexCoord;
-
-
-        
     
         uniform UBO {
             mat4 projection;
             mat4 view;
+            vec3 lightColor;
         };
     
         uniform mat4 model;
        
         out vec3 normal;
         out vec3 fragPos;
-        
     
         void main()
         {
@@ -93,18 +94,28 @@
         in vec3 normal;
         in vec3 fragPos;
 
+        uniform float ambientStrength;//0.1
+        uniform float specularStrength;//0.8
+
+        uniform vec3 spotLightDirection;
+        uniform float spotLightOpeningAngle;
+        uniform vec3 spotLightPosition;
+
         uniform vec3 lightPos;
         uniform vec3 viewPos;
         uniform vec3 objectColor;
-        uniform vec3 lightColor;
+
+        uniform UBO {
+            mat4 projection;
+            mat4 view;
+            vec3 lightColor;
+        };
 
         void main()
         {
-            //vec3 lightColor = vec3(1.0, 1.0, 1.0);
             vec3 norm = normalize(normal);
 
             // ambient
-            float ambientStrength = 0.1;
             vec3 ambient = ambientStrength * lightColor;
 
             // diffuse
@@ -113,13 +124,22 @@
             vec3 diffuse = diff * lightColor;
 
             // specular
-            float specularStrength = 0.8;
             vec3 viewDir = normalize(viewPos - fragPos);
             vec3 reflectDir = reflect(-lightDir, norm);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
             vec3 specular = specularStrength * spec * lightColor;
 
-            vec3 result = (ambient + diffuse + specular) * objectColor;
+            vec3 L = normalize(spotLightPosition - fragPos);
+            float spotLight_fdir;
+            float product = dot(-L, spotLightDirection);
+            float cosine = cos(spotLightOpeningAngle);
+            if (cosine < product){
+                spotLight_fdir = pow((product- cosine)/(1.0 - cosine), 5.0);
+            }
+            else spotLight_fdir = 0.0;
+            float spotLight_fdistance;
+
+            vec3 result = (ambient + spotLight_fdir*(diffuse + specular)) * objectColor;
             fragColor = vec4(result, 1.0);
         }
 </script>
@@ -129,6 +149,13 @@
 <body>
     <canvas id="myCanvas" width="500" height="500"></canvas>
     <script type="text/javascript">
+        function clamp(num, min, max) {
+            return num <= min 
+                ? min 
+                : num >= max 
+                ? max 
+                : num;
+        }
         var gl = createContext("myCanvas");
         //=====================================================
         // ============== Creation geomtry cube ===============
@@ -164,10 +191,6 @@
         // Unbind the VAO
         gl.bindVertexArray(null);
 
-        
-
-
-
 
         var shaderProgram = new ShaderProgram( );
         shaderProgram.createVertexShader(
@@ -181,12 +204,12 @@
 
         shaderProgram.autocatching( );
 
-
-
         shaderProgram.createUniform("model");
         shaderProgram.createUniform("lightPos");
         shaderProgram.createUniform("viewPos");
         shaderProgram.createUniform("objectColor");
+        shaderProgram.createUniform("ambientStrength");
+        shaderProgram.createUniform("specularStrength");
 
         // Shaders para la luz
         var shaderProgramL = new ShaderProgram( );
@@ -215,7 +238,7 @@
 
         gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, uboBuffer);
 
-        const uboVariablesNames = [ "projection", "view"];
+        const uboVariablesNames = [ "projection", "view", "lightColor"];
 
         //Obtenemos los ids
         const uboVariablesIndices = gl.getUniformIndices(
@@ -272,6 +295,22 @@
         var cameraPos   = [ camPosX, camPosY, camPosZ ];
         var cameraFront = [ camRotX, camRotY, camRotZ ];
         var cameraUp    = [ camUpX , camUpY , camUpZ  ];
+
+        // ***** LIGHT DATA *****
+        var ambientStrength = 0.1;
+        var specularStrength = 0.8;
+        var objectColor = new Float32Array([1.0, 0.5, 0.5]);
+        var lightColor = new Float32Array([1.0, 1.0, 1.0]);
+
+        shaderProgram.createUniform("spotLightPosition");
+        shaderProgram.createUniform("spotLightDirection");
+        shaderProgram.createUniform("spotLightOpeningAngle");
+
+        var spotLightPosition = new Float32Array([0,0,0]);
+        var spotLightDirection = new Float32Array([0,0,0]);
+        var spotLightOpeningAngle = Math.radians(30.0); 
+
+
         // =================================
         // ========== RENDER FUNC ==========
         // =================================
@@ -325,6 +364,12 @@
                 view,
                 0
             )
+            gl.bufferSubData(
+                gl.UNIFORM_BUFFER,
+                uboVariablesInfo["lightColor"].offset,
+                lightColor,
+                0
+            )
             // ***** FIRST SQUARE *****
             // MODEL MATRIX
             var angle = time * 100.0;
@@ -334,7 +379,7 @@
 
             shaderProgram.setUniformMat4("model", model);
             shaderProgram.setUniform3f("viewPos", camPosX, camPosY, -camPosZ);
-            shaderProgram.setUniform3f("objectColor", 1.0, 0.5,  0.5);
+            shaderProgram.setUniform3f("objectColor", objectColor[0], objectColor[1],  objectColor[2]);
 
             // ***** LIGHT *****
             var lightPosX = 3.0;
@@ -342,8 +387,12 @@
             var lightPosZ = 10.0;
             var lightPos = [lightPosX, lightPosY, lightPosZ];
             shaderProgram.setUniform3f("lightPos", lightPosX, lightPosY, lightPosZ);
-            shaderProgram.setUniform3f("lightColor", 1.0, 1.0, 1.0);
+            shaderProgram.setUniform1f("ambientStrength", ambientStrength);
+            shaderProgram.setUniform1f("specularStrength", specularStrength);
 
+            shaderProgram.setUniform3f("spotLightDirection", spotLightDirection);
+            shaderProgram.setUniform3f("spotLightPosition", spotLightPosition);
+            shaderProgram.setUniform1f("spotLightOpeningAngle", spotLightOpeningAngle)
             
             // ***** DRAWING FIRST SHADERS ******
             gl.bindVertexArray(VAO);
@@ -375,14 +424,13 @@
             //***** DRAWING SECOND SHADERS ******
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
 
-
-
             gl.bindVertexArray(null);
             requestAnimationFrame(renderFunc);
         }
         
         document.addEventListener('keydown', function (event) {
             /*
+                https://upload.wikimedia.org/wikipedia/commons/1/1b/ASCII-Table-wide.svg
                 65 => A
                 68 => D
                 83 => S
@@ -390,6 +438,7 @@
                 81 => Q
                 69 => E
     
+                camara
                 37 => Flecha izq
                 39 => Fecha drcha
                 38 => Fecha arriba
@@ -398,18 +447,58 @@
             */
            if(event.shiftKey) {
             switch (event.keyCode) {
-                case 38 : // rotating up
-                pitch += cameraRotSpeed
-                if( pitch > 89.0) {
-                    pitch = 89.0;
-                }
+                // ***** CUBE AND LIGHT CHANGES ***** 
+                case 73://I
+                    ambientStrength += 0.1;
+                    ambientStrength = Math.min(ambientStrength, 1.0);
+                    console.log("ambient strength=" + ambientStrength);
+                    break;
+                case 75://K
+                    ambientStrength -= 0.1;
+                    ambientStrength = Math.max(ambientStrength, 0.0);
+                    console.log("ambient strength=" + ambientStrength);
+                    break; 
+                case 79://O
+                    specularStrength += 0.1;
+                    specularStrength = Math.min(specularStrength, 1.0);
+                    console.log("specular strength=" + specularStrength);
+                    break;
+                case 76://L
+                    specularStrength -= 0.1;
+                    specularStrength = Math.max(specularStrength, 0.0);
+                    console.log("specular strength=" + specularStrength);
+                    break;
+                case 89://Y
+                    //amarillo
+                    objectColor[0] = 0.8;
+                    objectColor[1] = 0.8;
+                    objectColor[2] = 0.0;
+                    break;
+                case 82://R
+                    //rojo
+                    objectColor[0] = 1.0;
+                    objectColor[1] = 0.0;
+                    objectColor[2] = 0.0;
+                    break;
+                case 48://0
+                    //blanco
+                    objectColor[0] = 1.0;
+                    objectColor[1] = 1.0;
+                    objectColor[2] = 1.0;
+                    break;
 
+                // ***** CAMERA ROTATION *****
+                case 38 : // rotating up
+                    pitch += cameraRotSpeed
+                    if( pitch > 89.0) {
+                        pitch = 89.0;
+                    }
                     break;
                 case 40 : // rotating down
-                pitch -= cameraRotSpeed
-                if( pitch < -89.0) {
-                    pitch = -89.0;
-                }
+                    pitch -= cameraRotSpeed
+                    if( pitch < -89.0) {
+                        pitch = -89.0;
+                    }
                     break;
                 case 37 : // rotating left
                     yaw -= cameraRotSpeed;
@@ -417,35 +506,6 @@
                     break;
                 case 39 : // rotating down
                     yaw += cameraRotSpeed;
-
-                    break;             
-
-                case 37 :
-                rotationX -= speed;
-                rotationZ -= speed;
-                camX = Math.sin(rotationX) * radius;
-                camZ = Math.cos(rotationZ) * radius;
-
-                    break;
-                case 39 :
-                rotationX += speed;
-                rotationZ += speed;
-                camX = Math.sin(rotationX) * radius;
-                camZ = Math.cos(rotationZ) * radius;
-                    break;
-                case 40 :
-                rotationY -= speed;
-                rotationZ -= speed;
-                camY = Math.sin(rotationY) * radius;
-                camZ = Math.cos(rotationZ) * radius;
-
-                    break;
-                case 38 :
-                rotationY += speed;
-                rotationZ += speed;
-                camY = Math.sin(rotationY) * radius;
-                camZ = Math.cos(rotationZ) * radius;
-
                     break;
                 default :
                     break;
@@ -455,6 +515,7 @@
            else 
            {
                 switch (event.keyCode) {
+                    // ***** CAMERA MOVEMENT *****
                     case 38 : // going up
                     var cameraUpSpeed = [
                         cameraUp[0] * cameraPosSpeed,
@@ -496,7 +557,19 @@
                         console.log(" new camera position ", cameraPos)          
 
                         break;
-
+                    // ***** LIGHT CHANGES *****
+                    case 86://v
+                        //luz verde
+                        lightColor[0] = 0.0;
+                        lightColor[1] = 1.0;
+                        lightColor[2] = 0.0;
+                        break;
+                    case 66://b
+                        //luz blanca
+                        lightColor[0] = 1.0;
+                        lightColor[1] = 1.0;
+                        lightColor[2] = 1.0;
+                        break;
                     default :
                         break;
                 }
@@ -511,4 +584,3 @@
     </script>
 </body>
 
-</html>
