@@ -244,6 +244,7 @@
         index = gl.getUniformBlockIndex(shaderProgramL.mCompiledShader, "UBO");
         gl.uniformBlockBinding(shaderProgramL.mCompiledShader, index, 0);
 
+
         // ***** CAMERA DATAS *****
         // OTHER VALUES
         var radius = 20.0; // in meter
@@ -274,6 +275,7 @@
         // =================================
         // ========== RENDER FUNC ==========
         // =================================
+
         function renderFunc(time) {
             time *= 0.001; // to seconds
 
@@ -284,13 +286,9 @@
             gl.enable(gl.DEPTH_TEST);
             shaderProgram.bind();
 
-
-           
-
-        
-
             // ***** CAMERA MATRICES *****
             // PROJ MATRIX
+
             var proj = mat4.create();
             mat4.perspective(proj, Math.radians(60.0), 1.0, 0.001, 1000.0);
             // VIEW MATRIX
@@ -311,7 +309,9 @@
             vec3.add(camPosFront, cameraPos, cameraFront);
            
             var view = mat4.create();
+
             mat4.lookAt(view, cameraPos, camPosFront, cameraUp);
+
 
             gl.bufferSubData(
                 gl.UNIFORM_BUFFER,
@@ -419,6 +419,34 @@
                     yaw += cameraRotSpeed;
 
                     break;             
+
+                case 37 :
+                rotationX -= speed;
+                rotationZ -= speed;
+                camX = Math.sin(rotationX) * radius;
+                camZ = Math.cos(rotationZ) * radius;
+
+                    break;
+                case 39 :
+                rotationX += speed;
+                rotationZ += speed;
+                camX = Math.sin(rotationX) * radius;
+                camZ = Math.cos(rotationZ) * radius;
+                    break;
+                case 40 :
+                rotationY -= speed;
+                rotationZ -= speed;
+                camY = Math.sin(rotationY) * radius;
+                camZ = Math.cos(rotationZ) * radius;
+
+                    break;
+                case 38 :
+                rotationY += speed;
+                rotationZ += speed;
+                camY = Math.sin(rotationY) * radius;
+                camZ = Math.cos(rotationZ) * radius;
+
+                    break;
                 default :
                     break;
 
