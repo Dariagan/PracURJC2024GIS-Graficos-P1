@@ -488,6 +488,16 @@
                         objectColor[1] = 1.0;
                         objectColor[2] = 1.0;
                         break;
+                    // ***** CAMERA MOVEMENT *****
+                    case 32 :
+                        var cameraUpSpeed = [
+                            cameraUp[0] * cameraPosSpeed,
+                            cameraUp[1] * cameraPosSpeed,
+                            cameraUp[2] * cameraPosSpeed,
+                        ];
+                        vec3.subtract(cameraPos, cameraPos, cameraUpSpeed )     
+                        console.log(" new camera position ", cameraPos)
+                        break;
                     default :
                         break;
                 }
@@ -540,7 +550,15 @@
                         crossProduct[2] *= cameraPosSpeed;
                         vec3.add(cameraPos, cameraPos, crossProduct);
                         console.log(" new camera position ", cameraPos)          
-
+                        break;
+                    case 32 :
+                    var cameraUpSpeed = [
+                            cameraUp[0] * cameraPosSpeed,
+                            cameraUp[1] * cameraPosSpeed,
+                            cameraUp[2] * cameraPosSpeed,
+                        ];
+                        vec3.add(cameraPos, cameraPos, cameraUpSpeed )     
+                        console.log(" new camera position ", cameraPos)
                         break;
                     // ***** CAMERA RESET *****
                     case 67 : // C
