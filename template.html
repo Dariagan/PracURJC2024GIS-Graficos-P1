@@ -310,6 +310,11 @@
         var spotLightPosition = new Float32Array([0,0,0]);
         var spotLightDirection = new Float32Array([0,0,0]);
         var spotLightOpeningAngle = Math.radians(30.0); 
+        // POSITION
+        var lightPosX = 3.0;
+        var lightPosY = 1.0;
+        var lightPosZ = 10.0;
+        var lightPos = [lightPosX, lightPosY, lightPosZ];
 
 
         // ==========================================================
@@ -383,11 +388,8 @@
             shaderProgram.setUniform3f("objectColor", objectColor[0], objectColor[1],  objectColor[2]);
 
             // ***** LIGHT *****
-            var lightPosX = 3.0;
-            var lightPosY = 1.0;
-            var lightPosZ = 10.0;
-            var lightPos = [lightPosX, lightPosY, lightPosZ];
-            shaderProgram.setUniform3f("lightPos", lightPosX, lightPosY, lightPosZ);
+           
+            shaderProgram.setUniform3f("lightPos", lightPos[0], lightPos[1], lightPos[2]);
             shaderProgram.setUniform1f("ambientStrength", ambientStrength);
             shaderProgram.setUniform1f("specularStrength", specularStrength);
 
@@ -489,7 +491,8 @@
                         objectColor[2] = 1.0;
                         break;
                     // ***** CAMERA MOVEMENT *****
-                    case 32 :
+                    // GOING DOWN
+                    case 32 : // shift + space
                         var cameraUpSpeed = [
                             cameraUp[0] * cameraPosSpeed,
                             cameraUp[1] * cameraPosSpeed,
@@ -502,12 +505,72 @@
                         break;
                 }
            }
+           // ***** MOVING LIGHT *****
+           else if (event.altKey & event.ctrlKey) { // alt and ctrl to avoid ctrl + s and alt + d (shortcuts of firefox)
+                switch (event.keyCode) {
+                    // GOING FORWARD
+                    case 87 : // W
+                    case 90 : // Z
+                    case 38 : // arrow up
+                    var cameraFrontSpeed = [
+                            cameraFront[0] * cameraPosSpeed,
+                            cameraFront[1] * cameraPosSpeed,
+                            cameraFront[2] * cameraPosSpeed,
+                        ];
+                        vec3.subtract(lightPos, lightPos, cameraFrontSpeed )     
+                        console.log(" new light position ", lightPos)
+                        break;
+                    // GOING BACKWARD
+                    case 83 : // S
+                    case 40 : // arrow down
+                    var cameraFrontSpeed = [
+                            cameraFront[0] * cameraPosSpeed,
+                            cameraFront[1] * cameraPosSpeed,
+                            cameraFront[2] * cameraPosSpeed,
+                        ];
+                        vec3.add(lightPos, lightPos, cameraFrontSpeed )     
+                        console.log(" new light position ", lightPos)
+                        break;
+                    // GOING LEFT
+                    case 65 : // A
+                    case 81 : // Q
+                    case 37 : // arrow left
+                        var crossProduct = vec3.create();
+                        vec3.cross(crossProduct, cameraFront, cameraUp);
+                        vec3.normalize(crossProduct, crossProduct);
+                        crossProduct[0] *= cameraPosSpeed;
+                        crossProduct[1] *= cameraPosSpeed;
+                        crossProduct[2] *= cameraPosSpeed;
+                        vec3.subtract(lightPos, lightPos, crossProduct);
+                        console.log(" new light position ", lightPos)
+                        break;
+                    // GOING RIGHT
+                    case 68 : // D
+                    case 39 : // arrow right
+                        var crossProduct = vec3.create();
+                        vec3.cross(crossProduct, cameraFront, cameraUp);
+                        vec3.normalize(crossProduct, crossProduct);
+                        crossProduct[0] *= cameraPosSpeed;
+                        crossProduct[1] *= cameraPosSpeed;
+                        crossProduct[2] *= cameraPosSpeed;
+                        vec3.add(lightPos, lightPos, crossProduct);
+                        console.log(" new light position ", lightPos)
+                        break;
+                    // GOING UP
+                    case 32 : // space
+                        break;
+                    
+                    default :
+                        break;
+                }
+           }
            else {
                 switch (event.keyCode) {
                     // ***** CAMERA MOVEMENT *****
+                    // GOING FORWARD
                     case 87 : // W
                     case 90 : // Z
-                    case 38 : // going up
+                    case 38 : // arrow up
                         var cameraFrontSpeed = [
                             cameraFront[0] * cameraPosSpeed,
                             cameraFront[1] * cameraPosSpeed,
@@ -517,8 +580,9 @@
                         console.log(" new camera position ", cameraPos)
                     
                         break;
+                    // GOING BACKWARD
                     case 83 : // S
-                    case 40 : // going down
+                    case 40 : // arrow down
                         var cameraFrontSpeed = [
                             cameraFront[0] * cameraPosSpeed,
                             cameraFront[1] * cameraPosSpeed,
@@ -527,9 +591,10 @@
                         vec3.subtract(cameraPos, cameraPos, cameraFrontSpeed )      
                         console.log(" new camera position ", cameraPos)          
                         break;
+                    // GOING LEFT
                     case 65 : // A
                     case 81 : // Q
-                    case 37 : // going left
+                    case 37 : // arrow left
                         var crossProduct = vec3.create();
                         vec3.cross(crossProduct, cameraFront, cameraUp);
                         vec3.normalize(crossProduct, crossProduct);
@@ -540,8 +605,9 @@
                         console.log(" new camera position ", cameraPos)          
 
                         break;
+                    // GOING RIGHT
                     case 68 : // D
-                    case 39 : // going right
+                    case 39 : // arrow right
                         var crossProduct = vec3.create();
                         vec3.cross(crossProduct, cameraFront, cameraUp);
                         vec3.normalize(crossProduct, crossProduct);
@@ -551,7 +617,8 @@
                         vec3.add(cameraPos, cameraPos, crossProduct);
                         console.log(" new camera position ", cameraPos)          
                         break;
-                    case 32 :
+                    // GOING UP
+                    case 32 : // space
                     var cameraUpSpeed = [
                             cameraUp[0] * cameraPosSpeed,
                             cameraUp[1] * cameraPosSpeed,
@@ -598,11 +665,9 @@
                 clientX,
                 clientY
             } = event;
-            //console.log(clientX, clientY);
 
-            let x = clientX /*- rect.left*/;
-            let y = clientY /* - rect.top*/;
-            //console.log(x, y);
+            let x = clientX;
+            let y = clientY;
 
             
             if (firstMouse)
