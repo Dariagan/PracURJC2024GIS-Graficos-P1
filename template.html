@@ -129,17 +129,20 @@
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
             vec3 specular = specularStrength * spec * lightColor;
 
+            // Luz focal
+            float spotLight_fdir = 1.0;
             vec3 L = normalize(spotLightPosition - fragPos);
-            float spotLight_fdir;
-            float product = dot(-L, spotLightDirection);
+            float angle =  dot(-L, spotLightDirection) / (length(-L) * length(spotLightDirection));
             float cosine = cos(spotLightOpeningAngle);
-            if (cosine < product){
-                spotLight_fdir = pow((product- cosine)/(1.0 - cosine), 5.0);
+            if (cosine < angle) {
+                spotLight_fdir = pow((angle - cosine)/(1.0 - cosine), 5.0);
             }
-            else spotLight_fdir = 0.0;
+            else {
+                spotLight_fdir = 0.0;
+            }
             float spotLight_fdistance;
 
-            vec3 result = (ambient + spotLight_fdir*(diffuse + specular)) * objectColor;
+            vec3 result = (ambient + spotLight_fdir * (diffuse + specular)) * objectColor;
             fragColor = vec4(result, 1.0);
         }
 </script>
@@ -298,23 +301,26 @@
         var cameraUp    = [ camUpX , camUpY , camUpZ  ];
 
         // ***** LIGHT DATA *****
+        //  BEGIN POSITION
+        var lightPosX = 3.0;
+        var lightPosY = 1.0;
+        var lightPosZ = 10.0;
+        var lightPos = new Float32Array([lightPosX, lightPosY, lightPosZ]);
+        // OTHER VALUES
         var ambientStrength = 0.1;
         var specularStrength = 0.8;
+        var openingAngle = 30.0;
         var objectColor = new Float32Array([1.0, 0.5, 0.5]);
         var lightColor = new Float32Array([1.0, 1.0, 1.0]);
+       
+        var spotLightPosition = lightPos;
+        var spotLightTarget = [0,0,0];
+        var spotLightDirection = vec3.create();
+        var spotLightOpeningAngle = vec3.create; 
 
         shaderProgram.createUniform("spotLightPosition");
         shaderProgram.createUniform("spotLightDirection");
         shaderProgram.createUniform("spotLightOpeningAngle");
-
-        var spotLightPosition = new Float32Array([0,0,0]);
-        var spotLightDirection = new Float32Array([0,0,0]);
-        var spotLightOpeningAngle = Math.radians(30.0); 
-        // POSITION
-        var lightPosX = 3.0;
-        var lightPosY = 1.0;
-        var lightPosZ = 10.0;
-        var lightPos = [lightPosX, lightPosY, lightPosZ];
 
 
         // ==========================================================
@@ -388,13 +394,17 @@
             shaderProgram.setUniform3f("objectColor", objectColor[0], objectColor[1],  objectColor[2]);
 
             // ***** LIGHT *****
-           
+            spotLightPosition = lightPos;
+            vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
+            vec3.normalize(spotLightDirection, spotLightDirection);
+            var spotLightOpeningAngle = Math.radians(openingAngle); 
+
             shaderProgram.setUniform3f("lightPos", lightPos[0], lightPos[1], lightPos[2]);
             shaderProgram.setUniform1f("ambientStrength", ambientStrength);
             shaderProgram.setUniform1f("specularStrength", specularStrength);
 
-            shaderProgram.setUniform3f("spotLightDirection", spotLightDirection);
-            shaderProgram.setUniform3f("spotLightPosition", spotLightPosition);
+            shaderProgram.setUniform3f("spotLightDirection", spotLightDirection[0], spotLightDirection[1], spotLightDirection[2]);
+            shaderProgram.setUniform3f("spotLightPosition", spotLightPosition[0], spotLightPosition[1], spotLightPosition[2]);
             shaderProgram.setUniform1f("spotLightOpeningAngle", spotLightOpeningAngle)
             
             // ***** DRAWING FIRST SHADERS ******
@@ -517,7 +527,7 @@
                             cameraFront[1] * cameraPosSpeed,
                             cameraFront[2] * cameraPosSpeed,
                         ];
-                        vec3.subtract(lightPos, lightPos, cameraFrontSpeed )     
+                        vec3.add(lightPos, lightPos, cameraFrontSpeed )     
                         console.log(" new light position ", lightPos)
                         break;
                     // GOING BACKWARD
@@ -528,7 +538,7 @@
                             cameraFront[1] * cameraPosSpeed,
                             cameraFront[2] * cameraPosSpeed,
                         ];
-                        vec3.add(lightPos, lightPos, cameraFrontSpeed )     
+                        vec3.subtract(lightPos, lightPos, cameraFrontSpeed )     
                         console.log(" new light position ", lightPos)
                         break;
                     // GOING LEFT
@@ -653,6 +663,22 @@
                         lightColor[0] = 1.0;
                         lightColor[1] = 1.0;
                         lightColor[2] = 1.0;
+                        break;
+                    // LIGHT OPENING
+                    case 80 : // P
+                        openingAngle += 2.0;
+                        if(openingAngle > 180.0) {
+                            openingAngle = 180.0;
+                        }
+                        console.log("opening angle :",openingAngle);
+
+                        break;
+                    case 77 : // M
+                        openingAngle -= 2.0;
+                        if(openingAngle < 0.0) {
+                            openingAngle = 0.0;
+                        }
+                        console.log("opening angle :", openingAngle);
                         break;
                     default :
                         break;
