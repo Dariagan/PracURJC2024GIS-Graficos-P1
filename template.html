@@ -158,7 +158,6 @@
 
             float distance = length(spotLightPosition - fragPos) / spotLightStrenght;
             float fwin = pow(max(1.0 - pow(distance / spotLightStrenght, 4.0), 0.0), 2.0);
-
             float spotLight_fdistance = fwin * pow(spotLightIntensity, 2.0) / (pow(distance, 2.0) + 1.0);
 
             vec3 result = (ambient + spotLight_fdir * spotLight_fdistance * (diffuse + specular)) * objectColor;
@@ -610,7 +609,15 @@
                     // GOING UP
                     case 32 : // space
                         break;
-                    
+                    // RESET
+                    case 67 : // C
+                        lightPos[0] = lightPosX;
+                        lightPos[1] = lightPosY;
+                        lightPos[2] = lightPosZ;
+
+                        
+
+                        break; 
                     default :
                         break;
                 }
