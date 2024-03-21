@@ -98,7 +98,8 @@
         uniform float specularStrength;//0.8
 
         uniform vec3 spotLightDirection;
-        uniform float spotLightOpeningAngle;
+        uniform float spotLightShadowAngle;
+        uniform float spotLightCutOffAngle;
         uniform vec3 spotLightPosition;
 
         uniform vec3 lightPos;
@@ -125,21 +126,37 @@
 
             // specular
             vec3 viewDir = normalize(viewPos - fragPos);
-            vec3 reflectDir = reflect(-lightDir, norm);
+            //vec3 reflectDir = reflect(lightDir, norm);
+            vec3 reflectDir = 2.0 * (lightDir * norm) * norm - lightDir;
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
             vec3 specular = specularStrength * spec * lightColor;
 
             // Luz focal
-            float spotLight_fdir = 1.0;
+            float spotLight_fdir;
             vec3 L = normalize(spotLightPosition - fragPos);
             float angle =  dot(-L, spotLightDirection) / (length(-L) * length(spotLightDirection));
-            float cosine = cos(spotLightOpeningAngle);
-            if (cosine < angle) {
-                spotLight_fdir = pow((angle - cosine)/(1.0 - cosine), 5.0);
+            float cosShadowAngle = cos(spotLightShadowAngle);
+            float cosCutOffAngle = cos(spotLightCutOffAngle);
+
+            
+            if (cosCutOffAngle < angle ) {
+                
+                if (cosShadowAngle < angle ) {
+                    spotLight_fdir = 1.0;
+                }
+                else {
+                    float t = pow((angle - cosCutOffAngle)/(cosShadowAngle - cosCutOffAngle), 0.5);
+                    spotLight_fdir = pow(t, 2.0) * (3.0 - 2.0 * t);
+                }
+                
+
             }
+           
             else {
                 spotLight_fdir = 0.0;
             }
+            
+          
             float spotLight_fdistance;
 
             vec3 result = (ambient + spotLight_fdir * (diffuse + specular)) * objectColor;
@@ -309,18 +326,21 @@
         // OTHER VALUES
         var ambientStrength = 0.1;
         var specularStrength = 0.8;
-        var openingAngle = 30.0;
+        var shadowAngle = 6.0;
+        var cutOffAngle = 10.0;
         var objectColor = new Float32Array([1.0, 0.5, 0.5]);
         var lightColor = new Float32Array([1.0, 1.0, 1.0]);
-       
-        var spotLightPosition = lightPos;
         var spotLightTarget = [0,0,0];
+
+
+        var spotLightPosition = lightPos;
         var spotLightDirection = vec3.create();
-        var spotLightOpeningAngle = vec3.create; 
+        var spotLightShadowAngle = 0.0;
+        var spotLightCutOffAngle = 0.0;        
 
         shaderProgram.createUniform("spotLightPosition");
         shaderProgram.createUniform("spotLightDirection");
-        shaderProgram.createUniform("spotLightOpeningAngle");
+        shaderProgram.createUniform("spotLightShadowAngle");
 
 
         // ==========================================================
@@ -397,7 +417,8 @@
             spotLightPosition = lightPos;
             vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
             vec3.normalize(spotLightDirection, spotLightDirection);
-            var spotLightOpeningAngle = Math.radians(openingAngle); 
+            spotLightShadowAngle = Math.radians(shadowAngle); 
+            spotLightCutOffAngle = Math.radians(cutOffAngle); 
 
             shaderProgram.setUniform3f("lightPos", lightPos[0], lightPos[1], lightPos[2]);
             shaderProgram.setUniform1f("ambientStrength", ambientStrength);
@@ -405,7 +426,8 @@
 
             shaderProgram.setUniform3f("spotLightDirection", spotLightDirection[0], spotLightDirection[1], spotLightDirection[2]);
             shaderProgram.setUniform3f("spotLightPosition", spotLightPosition[0], spotLightPosition[1], spotLightPosition[2]);
-            shaderProgram.setUniform1f("spotLightOpeningAngle", spotLightOpeningAngle)
+            shaderProgram.setUniform1f("spotLightShadowAngle", spotLightShadowAngle);
+            shaderProgram.setUniform1f("spotLightCutOffAngle", spotLightCutOffAngle);
             
             // ***** DRAWING FIRST SHADERS ******
             gl.bindVertexArray(VAO);
@@ -510,6 +532,23 @@
                         ];
                         vec3.subtract(cameraPos, cameraPos, cameraUpSpeed )     
                         console.log(" new camera position ", cameraPos)
+                        break;
+
+                    // ***** LIGHT OPENING *****
+                    case 80 : // P
+                        shadowAngle += 2.0;
+                        if(shadowAngle  > cutOffAngle) {
+                            shadowAngle = cutOffAngle;
+                        }
+                        console.log("shadowAngle :",shadowAngle);
+
+                        break;
+                    case 77 : // M
+                        shadowAngle -= 2.0;
+                        if(shadowAngle < 0.0) {
+                            shadowAngle = 0.0;
+                        }
+                        console.log("shadowAngle :", shadowAngle);
                         break;
                     default :
                         break;
@@ -664,21 +703,21 @@
                         lightColor[1] = 1.0;
                         lightColor[2] = 1.0;
                         break;
-                    // LIGHT OPENING
+                    // ***** LIGHT OPENING *****
                     case 80 : // P
-                        openingAngle += 2.0;
-                        if(openingAngle > 180.0) {
-                            openingAngle = 180.0;
+                        cutOffAngle += 2.0;
+                        if(cutOffAngle > 180.0) {
+                            cutOffAngle = 180.0;
                         }
-                        console.log("opening angle :",openingAngle);
+                        console.log("cutOffAngle :",cutOffAngle);
 
                         break;
                     case 77 : // M
-                        openingAngle -= 2.0;
-                        if(openingAngle < 0.0) {
-                            openingAngle = 0.0;
+                        cutOffAngle -= 2.0;
+                        if(cutOffAngle < shadowAngle) {
+                            cutOffAngle = shadowAngle;
                         }
-                        console.log("opening angle :", openingAngle);
+                        console.log("cutOffAngle :", cutOffAngle);
                         break;
                     default :
                         break;
