@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Práctica 1 Remi [apellido] y Stefano Tomasini</title>
+    <title>Practica1 Remi y Stefano </title>
     <script type="text/javascript" src="auxiliars.js"></script>
     <script type="text/javascript" src="shader.js"></script>
     <script type="text/javascript" src="cube.js"></script>
@@ -19,7 +19,6 @@
         layout (location = 0) in vec3 aPos;
 
         uniform UBO {
-            vec3 dirLightDirection;
             mat4 projection;
             mat4 view;
             vec3 lightColor;
@@ -30,11 +29,10 @@
     </script>
     <script id="shader-fs-light" type="x-shader/x-fragment">#version 300 es
         precision mediump float;
-
+        //cubo pequeño luz
         out vec4 fragColor;
 
         uniform UBO {
-            vec3 dirLightDirection;
             mat4 projection;
             mat4 view;
             vec3 lightColor;
@@ -48,7 +46,6 @@
         layout (location = 2) in vec2 aTexCoord;
     
         uniform UBO {
-            vec3 dirLightDirection;
             mat4 projection;
             mat4 view;
             vec3 lightColor;
@@ -72,21 +69,29 @@
         in vec3 normal;
         in vec3 fragPos;
 
-        uniform float ambientStrength;//0.1
-        uniform float specularStrength;//0.8
+        uniform float ambientStrength;
+        uniform vec3 ambientColor;
+
+        uniform float specularStrength;
+        uniform vec3 specularColor;
+
 
         uniform vec3 spotLightPosition;
         uniform vec3 spotLightDirection;
         uniform float spotLightShadowAngle;
         uniform float spotLightCutOffAngle;
-        float spotLightStrenght = 100.0; // the length of the spotLight
-        float spotLightIntensity = 1.0; // the intensity of the light
+        float spotLightReach = 100.0; // the length of the spotLight
+        uniform float spotLightStrength; // the intensity of the light
+        uniform vec3 spotLightColor;
+
+        uniform float dirLightStrength;
+        uniform vec3 dirLightDirection;
+        uniform vec3 dirLightColor;
 
         uniform vec3 viewPos;
         uniform vec3 objectColor;
 
         uniform UBO {
-            vec3 dirLightDirection;//asignarle un color?
             mat4 projection;
             mat4 view;
             vec3 lightColor;
@@ -94,7 +99,7 @@
         void main(){
             vec3 norm = normalize(normal);
 
-            vec3 ambient = ambientStrength * lightColor;
+            vec3 ambient = ambientStrength * ambientColor;
 
             // diffuse
             vec3 lightDir = normalize(spotLightPosition - fragPos);
@@ -106,7 +111,7 @@
             //vec3 reflectDir = reflect(lightDir, norm);
             vec3 reflectDir = 2.0 * (lightDir * norm) * norm - lightDir;
 
-            vec3 specular = specularStrength * pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * lightColor;
+            vec3 specular = specularStrength * pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * specularColor;
 
             // Luz focal
             float spotLight_fdir;
@@ -124,30 +129,38 @@
             else spotLight_fdir = 0.0;
             
 
-            float dirLight = dot(norm, normalize(-dirLightDirection));
 
-            float distance = length(spotLightPosition - fragPos) / spotLightStrenght;
-            float fwin = pow(max(1.0 - pow(distance / spotLightStrenght, 4.0), 0.0), 2.0);
-            float spotLight_fdistance = fwin * pow(spotLightIntensity, 2.0) / (pow(distance, 2.0) + 1.0);
+            vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
-            vec3 result = (dirLight + ambient + spotLight_fdir * spotLight_fdistance * (diffuse + specular)) * objectColor;
+            float distance = length(spotLightPosition - fragPos) / spotLightReach;
+            float fwin = pow(max(1.0 - pow(distance / spotLightReach, 4.0), 0.0), 2.0);
+            float spotLight_fdistance = fwin * pow(spotLightStrength, 2.0) / (pow(distance, 2.0) + 1.0);
+
+            vec3 result = (dirLight + ambient + (spotLightColor * spotLight_fdir * spotLight_fdistance) * (diffuse + specular)) * objectColor;
             fragColor = vec4(result, 1.0);
         }
 </script>
 </head>
 <body>
     <canvas id="myCanvas" width="600 " height="600"></canvas>
+    https://jscolor.com/examples/
+    <br>
+    Ambient light <input id="ambientLightColorInput" value="rgba(255,255,255,0.15)" data-jscolor="{
+        onChange: 'update(this, 1)',
+    }" >
+    <br>
+    Specular light <input id="specularLightColorInput" value="rgba(255,255,255,0.8)" data-jscolor="{
+        onChange: 'update(this, 2)',
+    }">
+    <br>
+    Spotlight <input id="spotLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
+        onChange: 'update(this, 3)',
+    }">
+    <br>
+    Directional light <input id="dirLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
+        onChange: 'update(this, 4)',
+    }">
     <script src="jscolor.js"></script>
-https://jscolor.com/examples/
-    <br>
-    Ambient light color: <input id="ambientLightColorInput" value="#3399FF80" data-jscolor="{}">
-    <br>
-    Specular light color: <input id="specularLightColorInput" value="#3399FF80" data-jscolor="{}">
-    <br>
-    Spotlight color: <input id="spotLightColorInput" value="#3399FF80" data-jscolor="{}">
-    <br>
-    Directional light color: <input id="dirLightColorInput" value="#3399FF80" data-jscolor="{}">
-
     <script type="text/javascript">    
         var gl = createContext("myCanvas");
         // acceder al input value de color: document.getElementById('textbox_id').value 
@@ -221,7 +234,7 @@ https://jscolor.com/examples/
         gl.bufferData(gl.UNIFORM_BUFFER, blockSize, gl.DYNAMIC_DRAW);
         gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, uboBuffer);
 
-        const uboVariablesNames = ["dirLightDirection", "projection", "view", "lightColor"];
+        const uboVariablesNames = ["projection", "view", "lightColor"];
 
         //Obtenemos los ids
         const uboVariablesIndices = gl.getUniformIndices(
@@ -253,6 +266,7 @@ https://jscolor.com/examples/
         canvas.style.cursor = 'none';
         let rect = canvas.getBoundingClientRect();
       
+        
         // OTHER VALUES
         var radius = 20.0; // in meter
         var sensibility = 0.5
@@ -270,7 +284,7 @@ https://jscolor.com/examples/
         var initialCamUp = new Float32Array([0.0, 1.0, 0.0]);
         // VECTORS OF LOOKAT MATRIX
         var cameraPos   = initialCamPos
-        var cameraFront = new Float32Array([ 0.0    , 0.0    , 0.0     ]);
+        var cameraFront = new Float32Array([ 0.0, 0.0, 0.0]);
         var cameraUp    = initialCamUp;
 
         // ***** LIGHT DATA *****
@@ -279,22 +293,32 @@ https://jscolor.com/examples/
 
         // OTHER VALUES
         var ambientStrength = 0.15;
+
+        var ambientColor = new Float32Array([1.0, 1.0, 1.0]);
+
         var specularStrength = 0.8;
+        var specularColor = new Float32Array([1.0, 1.0, 1.0]);
         var shadowAngle = 0.0;
         var cutOffAngle = 9.0;
         var objectColor = new Float32Array([1.0, 0.5, 0.5]);
         var lightColor = new Float32Array([1.0, 1.0, 1.0]);
-        var spotLightTarget = new Float32Array([0,0,0]);
 
+        var spotLightStrength = 1.0;
+        var spotLightTarget = new Float32Array([0, 0, 0]);
         var spotLightPosition = lightPos;
         var spotLightDirection = vec3.create();
         var spotLightShadowAngle = 0.0;
         var spotLightCutOffAngle = 0.0;        
+        var spotLightColor = new Float32Array([1.0, 1.0, 1.0]);
 
-        var dirLightDirection = new Float32Array([0.0, 0.0, 0.0])
+        var dirLightStrength = 1.0;
+        var dirLightColor = new Float32Array([1.0, 1.0, 1.0]);
+        var dirLightDirection = new Float32Array([0.0, 0.0, 0.0]);
 
-        shaderProgram.autocatching( );
-        shaderProgramL.autocatching( );
+        shaderProgram.autocatching();
+        shaderProgramL.autocatching();
+
+        jscolor.trigger('change');
 
         // ==========================================================
         // ==================== RENDER FUNC =========================
@@ -335,10 +359,7 @@ https://jscolor.com/examples/
 
             mat4.lookAt(view, cameraPos, camPosFront, cameraUp);
 
-            gl.bufferSubData(
-                gl.UNIFORM_BUFFER, uboVariablesInfo["dirLightDirection"].offset,
-                dirLightDirection, 0
-            )
+    
             gl.bufferSubData(
                 gl.UNIFORM_BUFFER, uboVariablesInfo["projection"].offset,
                 proj, 0
@@ -364,17 +385,24 @@ https://jscolor.com/examples/
 
             shaderProgram.setUniform3f("lightPos", ...lightPos);
             shaderProgram.setUniform1f("ambientStrength", ambientStrength);
+            shaderProgram.setUniform3f("ambientColor", ...ambientColor)
+
             shaderProgram.setUniform1f("specularStrength", specularStrength);
+            shaderProgram.setUniform3f("specularColor", ...specularColor)
 
             //directional light orbiting
-            const orbitingSpeed = 0.9;
+            const orbitingSpeed = 0.1;
 
             dirLightDirection[0] = Math.cos(time*orbitingSpeed);
             dirLightDirection[1] = Math.sin(time*orbitingSpeed);
             dirLightDirection[2] = 0;
 
-            shaderProgram.setUniform3f("dirLightDirection", ...dirLightDirection);
+            shaderProgram.setUniform3f("dirLightColor", ...dirLightColor)
+            shaderProgram.setUniform1f("dirLightStrength", dirLightStrength);
+            shaderProgram.setUniform3f("dirLightDirection", ...dirLightDirection);  
 
+            shaderProgram.setUniform3f("spotLightColor", ...spotLightColor)
+            shaderProgram.setUniform1f("spotLightStrength", spotLightStrength);
             shaderProgram.setUniform3f("spotLightDirection", ...spotLightDirection);
             shaderProgram.setUniform3f("spotLightPosition", ...spotLightPosition);
             shaderProgram.setUniform1f("spotLightShadowAngle", spotLightShadowAngle);
@@ -413,7 +441,7 @@ https://jscolor.com/examples/
             let modelLight = mat4.create();
             mat4.translate (modelLight, modelLight, lightPos);
             mat4.scale(modelLight, modelLight, [0.25, 0.25, 0.25]);
-            mat4.rotate(modelLight, modelLight, Math.radians(angle), [-1.0, -0.5, -1.0]);
+            mat4.rotate(modelLight, modelLight, Math.radians(time*100.0), [-1.0, -0.5, -1.0]);
 
             shaderProgramL.setUniformMat4("model", modelLight);
           
@@ -422,6 +450,36 @@ https://jscolor.com/examples/
 
             gl.bindVertexArray(null);
             requestAnimationFrame(renderFunc);
+        }
+
+        function update(picker, type) {
+            switch (type){
+                case 1:
+                    ambientColor[0] = picker.channel('R')/255
+                    ambientColor[1] = picker.channel('G')/255
+                    ambientColor[2] = picker.channel('B')/255
+                    ambientStrength = picker.channel('A')
+                break;
+                case 2:
+                    specularColor[0] = picker.channel('R')/255
+                    specularColor[1] = picker.channel('G')/255
+                    specularColor[2] = picker.channel('B')/255
+                    specularStrength = picker.channel('A')
+                break;
+                case 3:
+                    spotLightColor[0] = picker.channel('R')/255
+                    spotLightColor[1] = picker.channel('G')/255
+                    spotLightColor[2] = picker.channel('B')/255
+                    spotLightStrength = picker.channel('A')
+                break;
+                case 4:
+                    dirLightColor[0] = picker.channel('R')/255
+                    dirLightColor[1] = picker.channel('G')/255
+                    dirLightColor[2] = picker.channel('B')/255
+                    dirLightStrength = picker.channel('A')
+                break;
+                default: console.error("type of light's color to update not handled")
+            }
         }
         
         document.addEventListener('keydown', function (event) {
@@ -432,26 +490,7 @@ https://jscolor.com/examples/
            if(event.shiftKey) {
                 switch (event.keyCode) {
                     // ***** AMBIENT AND SPECULAR ***** 
-                    case 49: // shift + 1
-                        ambientStrength += 0.1;
-                        ambientStrength = Math.min(ambientStrength, 1.0);
-                        console.log("ambient strength=" + ambientStrength);
-                        break;
-                    case 50: // shift + 2
-                        ambientStrength -= 0.1;
-                        ambientStrength = Math.max(ambientStrength, 0.0);
-                        console.log("ambient strength=" + ambientStrength);
-                        break; 
-                    case 51: // shift + 3
-                        specularStrength += 0.1;
-                        specularStrength = Math.min(specularStrength, 1.0);
-                        console.log("specular strength=" + specularStrength);
-                        break;
-                    case 52: // shift + 4
-                        specularStrength -= 0.1;
-                        specularStrength = Math.max(specularStrength, 0.0);
-                        console.log("specular strength=" + specularStrength);
-                        break;
+                  
                     // ***** CUBE COLOR *****
                     case 53: // shift + 5
                         //amarillo
@@ -590,18 +629,7 @@ https://jscolor.com/examples/
                         pitch = 0.0;
 
                         break;
-                    // ***** LIGHT COLOR ***** THIS SECTION TO BE REMOVED (WILL BE REPLACED BY COLOR PICKER EVENTS)
-                    case 86: // V
-                        //luz verde
-                        lightColor[0] = 0.0;
-                        lightColor[1] = 1.0;
-                        lightColor[2] = 0.0;
-                        break;
-                    case 66: // B
-                        //white light
-                        lightColor.fill(1.0);
-                        break;
-                    // ^^^^^ LIGHT COLOR ^^^^^ THIS SECTION TO BE REMOVED
+
                     // ***** SPOTLIGHT OPENING *****
                     case 80 : // P
                         cutOffAngle += 2.0;
@@ -638,8 +666,8 @@ https://jscolor.com/examples/
             yaw   += xoffset;
             pitch += yoffset;
 
-            pitch = Math.clamp(pitch, -89.0, 89.0)}
-            )
+            pitch = Math.clamp(pitch, -89.0, 89.0)
+        })
 
         renderFunc(0.0);
 
