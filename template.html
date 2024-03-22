@@ -395,15 +395,20 @@ https://jscolor.com/examples/
                 [ 3.0, 0.4, -3.0], 
                 [-2.6, 2.0, -3.0],
              ];
-            for(let i = 0; i < cubePositions.length; i++){
+             let colorStep = 1 / cubePositions.length;
+
+            for(let i = 0; i < cubePositions.length; i ++)
+            {
+
                 // MODEL MATRIX
                 const angle = (i + 1.0) / 3.0 *  time  * 100.0;   
                 let model = mat4.create();
                 mat4.translate(model, model, cubePositions[i]);
                 mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
-
                 shaderProgram.setUniformMat4("model", model);
-                shaderProgram.setUniform3f("objectColor", ...objectColor);
+                // CUBE COLOR
+                var cubeColor = new Float32Array([colorStep * i, 0 , 1 - colorStep * i]);
+                shaderProgram.setUniform3f("objectColor", ...cubeColor);
                 gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
             }
             // ***** SECOND SQUARE (indicates light) *****
