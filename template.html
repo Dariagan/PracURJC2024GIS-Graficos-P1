@@ -421,8 +421,8 @@
 
             spotLightPosition = cameraPos;
             spotLightDirection = cameraFront;
-            vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
-            vec3.normalize(spotLightDirection, spotLightDirection);
+            //vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
+            //vec3.normalize(spotLightDirection, spotLightDirection);
             spotLightShadowAngle = Math.radians(shadowAngle); 
             spotLightCutOffAngle = Math.radians(cutOffAngle); 
 
