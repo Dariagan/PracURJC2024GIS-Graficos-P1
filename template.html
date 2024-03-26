@@ -23,7 +23,6 @@
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
-            float pointLightReach;
         };
         uniform mat4 model;
     
@@ -40,7 +39,6 @@
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
-            float pointLightReach;
         };
         void main(){fragColor = vec4(pointLightColor, pointLightStrength);}
     </script>
@@ -56,7 +54,6 @@
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
-            float pointLightReach;
         };
         uniform mat4 model;
        
@@ -98,13 +95,14 @@
         uniform vec3 viewPos;
         uniform vec3 objectColor;
 
+        uniform float pointLightReach;
+
         uniform UBO {
             mat4 projection;
             mat4 view;
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
-            float pointLightReach;
         };
         void main(){
             vec3 norm = normalize(normal);
@@ -337,7 +335,7 @@
         var pointLightPos = new Float32Array([0.0, 0.0, 0.0]);
         var pointLightColor = new Float32Array([1.0, 1.0, 1.0]);
         var pointLightStrength = new Float32Array([1.0]);
-        var pointLightReach = new Float32Array([400.0]);
+        var pointLightReach = 400.0;
 
         shaderProgram.autocatching();
         shaderProgramL.autocatching();
@@ -393,13 +391,10 @@
                 view, 0
             )
             
-            
             // ***** FIRST SQUARE *****
             shaderProgram.setUniform3f("viewPos", initialCamPos[0], initialCamPos[1], -initialCamPos[2]);
 
             // ***** LIGHT *****
-            
-
             shaderProgram.setUniform1f("ambientStrength", ambientStrength);
             shaderProgram.setUniform3f("ambientColor", ...ambientColor)
 
@@ -449,10 +444,7 @@
                 gl.UNIFORM_BUFFER, uboVariablesInfo["pointLightStrength"].offset,
                 pointLightStrength, 0
             )
-            gl.bufferSubData(
-                gl.UNIFORM_BUFFER, uboVariablesInfo["pointLightReach"].offset,
-                pointLightReach, 0
-            )
+            shaderProgram.setUniform1f("pointLightReach", pointLightReach)
                                 
             // ***** DRAWING FIRST SHADERS ******
             gl.bindVertexArray(VAO);
