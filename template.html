@@ -21,9 +21,9 @@
         uniform UBO {
             mat4 projection;
             mat4 view;
-            vec3 lightColor;
-            vec3 poncLightPos;
-
+            vec3 pointLightColor;
+            vec3 pointLightPos;
+            float pointLightStrength;
         };
         uniform mat4 model;
     
@@ -37,11 +37,11 @@
         uniform UBO {
             mat4 projection;
             mat4 view;
-            vec3 lightColor;
-            vec3 poncLightPos;
-
+            vec3 pointLightColor;
+            vec3 pointLightPos;
+            float pointLightStrength;
         };
-        void main(){fragColor = vec4(lightColor, 1.0);}
+        void main(){fragColor = vec4(pointLightColor, pointLightStrength);}
     </script>
     <script id="shader-vs" type="x-shader/x-vertex">#version 300 es
         precision mediump float;
@@ -52,9 +52,9 @@
         uniform UBO {
             mat4 projection;
             mat4 view;
-            vec3 lightColor;
-            vec3 poncLightPos;
-
+            vec3 pointLightColor;
+            vec3 pointLightPos;
+            float pointLightStrength;
         };
         uniform mat4 model;
        
@@ -81,8 +81,6 @@
         uniform float specularStrength;
         uniform vec3 specularColor;
 
-        uniform vec3 dirLightDirection;//asignarle un color?
-
         uniform vec3 spotLightPosition;
         uniform vec3 spotLightDirection;
         uniform float spotLightShadowAngle;
@@ -101,8 +99,9 @@
         uniform UBO {
             mat4 projection;
             mat4 view;
-            vec3 lightColor;
-            vec3 poncLightPos;
+            vec3 pointLightColor;
+            vec3 pointLightPos;
+            float pointLightStrength;
         };
         void main(){
             vec3 norm = normalize(normal);
@@ -112,16 +111,15 @@
             // diffuse
             vec3 lightDir = normalize(spotLightPosition - fragPos);
             float diff = max(dot(norm, lightDir), 0.0);
-            vec3 diffuse = diff * lightColor;
+            vec3 diffuse = diff * specularColor;
 
             // specular
             vec3 viewDir = normalize(viewPos - fragPos);
-            //vec3 reflectDir = reflect(lightDir, norm);
-            vec3 reflectDir = 2.0 * (lightDir * norm) * norm - lightDir;
+            vec3 reflectDir = reflect(lightDir, norm);
 
             vec3 specular = specularStrength * pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * specularColor;
 
-            // Luz focal
+            // Spotlight
             float spotLight_fdir;
             vec3 L = normalize(spotLightPosition - fragPos);
             float angle =  dot(-L, spotLightDirection) / (length(-L) * length(spotLightDirection));
@@ -135,10 +133,10 @@
                 }
             else spotLight_fdir = 0.0;
             
-            // luz puntual
-            vec3 poncLightDir = poncLightPos - fragPos; 
-            float iPonctual = max(dot(norm, normalize(poncLightDir)), 0.0);
-            float poncDistance = length(poncLightDir);
+            // Point light
+            vec3 pointLightDir = pointLightPos - fragPos; 
+            vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength;
+            float poncDistance = length(pointLightDir);
 
 
             vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
@@ -147,7 +145,7 @@
             float fwin = pow(max(1.0 - pow(distance / spotLightReach, 4.0), 0.0), 2.0);
             float spotLight_fdistance = fwin * pow(spotLightStrength, 2.0) / (pow(distance, 2.0) + 1.0);
 
-            vec3 result = (dirLight + ambient + iPonctual + (spotLightColor * spotLight_fdir * spotLight_fdistance) * (diffuse + specular)) * objectColor;
+            vec3 result = (dirLight + ambient + pointLight + (spotLightColor * spotLight_fdir * spotLight_fdistance) * (diffuse + specular)) * objectColor;
             fragColor = vec4(result, 1.0);
         }
 </script>
@@ -170,6 +168,10 @@
     <br>
     Directional light <input id="dirLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
         onChange: 'update(this, 4)',
+    }">
+    <br>
+    Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
+        onChange: 'update(this, 5)',
     }">
     <script src="jscolor.js"></script>
     <script type="text/javascript">    
@@ -245,7 +247,7 @@
         gl.bufferData(gl.UNIFORM_BUFFER, blockSize, gl.DYNAMIC_DRAW);
         gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, uboBuffer);
 
-        const uboVariablesNames = ["projection", "view", "lightColor", "poncLightPos"];
+        const uboVariablesNames = ["projection", "view", "pointLightColor", "pointLightPos", "pointLightStrength"];
 
         //Obtenemos los ids
         const uboVariablesIndices = gl.getUniformIndices(
@@ -312,7 +314,7 @@
         var shadowAngle = 0.0;
         var cutOffAngle = 9.0;
         var objectColor = new Float32Array([1.0, 0.5, 0.5]);
-        var lightColor = new Float32Array([1.0, 1.0, 1.0]);
+        var pointLightColor = new Float32Array([1.0, 1.0, 1.0]);
 
         var spotLightStrength = 1.0;
         var spotLightTarget = new Float32Array([0, 0, 0]);
@@ -326,10 +328,12 @@
         var dirLightColor = new Float32Array([1.0, 1.0, 1.0]);
         var dirLightDirection = new Float32Array([0.0, 0.0, 0.0]);
 
-        // PUNTUAL LIGHT
-        const poncOrbitingSpeed = 0.9;
-        const poncRadius = 50;
-        var poncLightPos = new Float32Array([0.0, 0.0, 0.0]);
+        // POINT LIGHT
+        const pointLightOrbitingSpeed = 0.9;
+        const pointLightOrbitRadius = 50;
+        var pointLightPos = new Float32Array([0.0, 0.0, 0.0]);
+        var pointLightColor = new Float32Array([1.0, 1.0, 1.0]);
+        var pointLightStrength = new Float32Array([1.0]);
 
         shaderProgram.autocatching();
         shaderProgramL.autocatching();
@@ -373,42 +377,7 @@
            
             var view = mat4.create();
 
-            mat4.lookAt(view, cameraPos, camPosFront, cameraUp);
-
-         
-            //ARREGLAR
-            
-            // // ***** FIRST SQUARE *****
-            // shaderProgram.setUniform3f("viewPos", initialCamPos[0], initialCamPos[1], -initialCamPos[2]);
-
-            // // ***** LIGHT *****
-            // spotLightPosition = cameraPos;
-            // spotLightDirection = cameraFront;
-            // //vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
-            // //vec3.normalize(spotLightDirection, spotLightDirection);
-            // spotLightShadowAngle = Math.radians(shadowAngle); 
-            // spotLightCutOffAngle = Math.radians(cutOffAngle); 
-
-            // shaderProgram.setUniform1f("ambientStrength", ambientStrength);
-            // shaderProgram.setUniform1f("specularStrength", specularStrength);
-            // shaderProgram.setUniform3f("spotLightDirection", ...spotLightDirection);
-            // shaderProgram.setUniform3f("spotLightPosition", ...spotLightPosition);
-            // shaderProgram.setUniform1f("spotLightShadowAngle", spotLightShadowAngle);
-            // shaderProgram.setUniform1f("spotLightCutOffAngle", spotLightCutOffAngle);
-
-            // //***** DIRECTIONAL LIGHT ORBITING *****
-
-            // dirLightDirection[0] = Math.cos(time * orbitingSpeed);
-            // dirLightDirection[1] = Math.sin(time * orbitingSpeed);
-            // dirLightDirection[2] = 0;
-
-            // shaderProgram.setUniform3f("dirLightDirection", ...dirLightDirection);
-            
-            // //***** PUNTUAL LIGHT ORBITING *****
-            
-            // poncLightPos[0] = poncRadius * Math.cos(time * orbitingSpeed);
-            // poncLightPos[1] = 0.0;
-            // poncLightPos[2] = poncRadius * Math.sin(time * orbitingSpeed);
+            mat4.lookAt(view, cameraPos, camPosFront, cameraUp);            
 
             // ***** SETTING UBO *****
             gl.bufferSubData(
@@ -419,29 +388,27 @@
                 gl.UNIFORM_BUFFER, uboVariablesInfo["view"].offset,
                 view, 0
             )
-            gl.bufferSubData(
-                gl.UNIFORM_BUFFER, uboVariablesInfo["lightColor"].offset,
-                lightColor, 0
-            )
+            
             
             // ***** FIRST SQUARE *****
             shaderProgram.setUniform3f("viewPos", initialCamPos[0], initialCamPos[1], -initialCamPos[2]);
 
             // ***** LIGHT *****
-            spotLightPosition = lightPos;
-            vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
-            vec3.normalize(spotLightDirection, spotLightDirection);
-            spotLightShadowAngle = Math.radians(shadowAngle); 
-            spotLightCutOffAngle = Math.radians(cutOffAngle); 
+            
 
-            shaderProgram.setUniform3f("lightPos", ...lightPos);
             shaderProgram.setUniform1f("ambientStrength", ambientStrength);
             shaderProgram.setUniform3f("ambientColor", ...ambientColor)
 
             shaderProgram.setUniform1f("specularStrength", specularStrength);
             shaderProgram.setUniform3f("specularColor", ...specularColor)
 
-            //directional light orbiting
+            //***** POINT LIGHT ORBITING *****
+            
+            pointLightPos[0] = pointLightOrbitRadius * Math.cos(time * pointLightOrbitingSpeed);
+            pointLightPos[1] = 0.0;
+            pointLightPos[2] = pointLightOrbitRadius * Math.sin(time * pointLightOrbitingSpeed);
+
+            // DIRECTIONAL LIGHT ORBITING
             const orbitingSpeed = 0.1;
 
             dirLightDirection[0] = Math.cos(time*orbitingSpeed);
@@ -452,6 +419,13 @@
             shaderProgram.setUniform1f("dirLightStrength", dirLightStrength);
             shaderProgram.setUniform3f("dirLightDirection", ...dirLightDirection);  
 
+            spotLightPosition = cameraPos;
+            spotLightDirection = cameraFront;
+            vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
+            vec3.normalize(spotLightDirection, spotLightDirection);
+            spotLightShadowAngle = Math.radians(shadowAngle); 
+            spotLightCutOffAngle = Math.radians(cutOffAngle); 
+
             shaderProgram.setUniform3f("spotLightColor", ...spotLightColor)
             shaderProgram.setUniform1f("spotLightStrength", spotLightStrength);
             shaderProgram.setUniform3f("spotLightDirection", ...spotLightDirection);
@@ -460,8 +434,16 @@
             shaderProgram.setUniform1f("spotLightCutOffAngle", spotLightCutOffAngle);
             
             gl.bufferSubData(
-                gl.UNIFORM_BUFFER, uboVariablesInfo["poncLightPos"].offset,
-                poncLightPos, 0
+                gl.UNIFORM_BUFFER, uboVariablesInfo["pointLightColor"].offset,
+                pointLightColor, 0
+            )
+            gl.bufferSubData(
+                gl.UNIFORM_BUFFER, uboVariablesInfo["pointLightPos"].offset,
+                pointLightPos, 0
+            )
+            gl.bufferSubData(
+                gl.UNIFORM_BUFFER, uboVariablesInfo["pointLightStrength"].offset,
+                pointLightStrength, 0
             )
                                 
             // ***** DRAWING FIRST SHADERS ******
@@ -502,7 +484,7 @@
 
             // MODEL MATRIX
             let modelLight = mat4.create();
-            mat4.translate (modelLight, modelLight, poncLightPos);
+            mat4.translate (modelLight, modelLight, pointLightPos);
             mat4.scale(modelLight, modelLight, [0.25, 0.25, 0.25]);
             mat4.rotate(modelLight, modelLight, Math.radians(time * 100.0), [-1.0, -0.5, -1.0]);
 
@@ -540,6 +522,12 @@
                     dirLightColor[1] = picker.channel('G')/255
                     dirLightColor[2] = picker.channel('B')/255
                     dirLightStrength = picker.channel('A')
+                break;
+                case 5:
+                    pointLightColor[0] = picker.channel('R')/255
+                    pointLightColor[1] = picker.channel('G')/255
+                    pointLightColor[2] = picker.channel('B')/255
+                    pointLightStrength[0] = picker.channel('A')
                 break;
                 default: console.error("type of light's color to update not handled")
             }
