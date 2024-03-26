@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>Practica1 Remi y Stefano </title>
     <script type="text/javascript" src="auxiliars.js"></script>
@@ -24,6 +23,7 @@
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
+            float pointLightReach;
         };
         uniform mat4 model;
     
@@ -40,6 +40,7 @@
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
+            float pointLightReach;
         };
         void main(){fragColor = vec4(pointLightColor, pointLightStrength);}
     </script>
@@ -55,6 +56,7 @@
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
+            float pointLightReach;
         };
         uniform mat4 model;
        
@@ -102,6 +104,7 @@
             vec3 pointLightColor;
             vec3 pointLightPos;
             float pointLightStrength;
+            float pointLightReach;
         };
         void main(){
             vec3 norm = normalize(normal);
@@ -132,18 +135,19 @@
                     spotLight_fdir = pow(t, 2.0) * (3.0 - 2.0 * t);
                 }
             else spotLight_fdir = 0.0;
-            
-            // Point light
-            vec3 pointLightDir = pointLightPos - fragPos; 
-            vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength;
-            float poncDistance = length(pointLightDir);
-
-
-            vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
             float distance = length(spotLightPosition - fragPos) / spotLightReach;
             float fwin = pow(max(1.0 - pow(distance / spotLightReach, 4.0), 0.0), 2.0);
             float spotLight_fdistance = fwin * pow(spotLightStrength, 2.0) / (pow(distance, 2.0) + 1.0);
+            
+            // Point light
+            vec3 pointLightDir = pointLightPos - fragPos; 
+            vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength;
+
+
+            //float pointLightIntensity = pointLightReach/(attLinear*length(pointLightDir)+attExp*length(pointLightDir)*length(pointLightDir));
+
+            vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
             vec3 result = (dirLight + ambient + pointLight + (spotLightColor * spotLight_fdir * spotLight_fdistance) * (diffuse + specular)) * objectColor;
             fragColor = vec4(result, 1.0);
@@ -173,6 +177,8 @@
     Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
         onChange: 'update(this, 5)',
     }">
+    <br>
+    TODO: ADD SLIDERS HERE FOR OTHER PARAMETERS
     <script src="jscolor.js"></script>
     <script type="text/javascript">    
         var gl = createContext("myCanvas");
@@ -281,7 +287,6 @@
       
         
         // OTHER VALUES
-        var radius = 20.0; // in meter
         var sensibility = 0.5
         var cameraPosSpeed = sensibility; // in meter per tick
         var cameraRotSpeed = sensibility / 3; // in meter per tick
@@ -291,7 +296,7 @@
         var lastMouseY = rect.y / 2; // middle of the canva y value
         var firstMouse = true;
         // CAMERA POSITION VALUES
-        const initialCamPos = new Float32Array([0.0, 0.0, radius]);
+        const initialCamPos = new Float32Array([0.0, 0.0, 20.0]);
 
         // CAMERA UP VALUES
         var initialCamUp = new Float32Array([0.0, 1.0, 0.0]);
@@ -301,8 +306,6 @@
         var cameraUp    = initialCamUp;
 
         // ***** LIGHT DATA *****
-        //  BEGIN POSITION
-        var lightPos = new Float32Array([3.0, 1.0, 10.0]);
 
         // OTHER VALUES
         var ambientStrength = 0.15;
@@ -318,7 +321,7 @@
 
         var spotLightStrength = 1.0;
         var spotLightTarget = new Float32Array([0, 0, 0]);
-        var spotLightPosition = lightPos;
+        var spotLightPosition = cameraPos;
         var spotLightDirection = vec3.create();
         var spotLightShadowAngle = 0.0;
         var spotLightCutOffAngle = 0.0;        
@@ -334,6 +337,7 @@
         var pointLightPos = new Float32Array([0.0, 0.0, 0.0]);
         var pointLightColor = new Float32Array([1.0, 1.0, 1.0]);
         var pointLightStrength = new Float32Array([1.0]);
+        var pointLightReach = new Float32Array([400.0]);
 
         shaderProgram.autocatching();
         shaderProgramL.autocatching();
@@ -421,8 +425,8 @@
 
             spotLightPosition = cameraPos;
             spotLightDirection = cameraFront;
-            //vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
-            //vec3.normalize(spotLightDirection, spotLightDirection);
+            // vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
+            // vec3.normalize(spotLightDirection, spotLightDirection);
             spotLightShadowAngle = Math.radians(shadowAngle); 
             spotLightCutOffAngle = Math.radians(cutOffAngle); 
 
@@ -444,6 +448,10 @@
             gl.bufferSubData(
                 gl.UNIFORM_BUFFER, uboVariablesInfo["pointLightStrength"].offset,
                 pointLightStrength, 0
+            )
+            gl.bufferSubData(
+                gl.UNIFORM_BUFFER, uboVariablesInfo["pointLightReach"].offset,
+                pointLightReach, 0
             )
                                 
             // ***** DRAWING FIRST SHADERS ******
@@ -724,4 +732,3 @@
 
     </script>
 </body>
-
