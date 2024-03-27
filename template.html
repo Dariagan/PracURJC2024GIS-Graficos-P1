@@ -77,6 +77,9 @@
         uniform float ambientStrength;
         uniform vec3 ambientColor;
 
+        uniform vec3 diffuseColor;
+        uniform float diffuseStrength;
+
         uniform float specularStrength;
         uniform vec3 specularColor;
 
@@ -112,13 +115,14 @@
             // diffuse
             vec3 lightDir = normalize(spotLightPosition - fragPos);
             float diff = max(dot(norm, lightDir), 0.0);
-            vec3 diffuse = diff * specularColor;
+            vec3 diffuse = diff * diffuseColor * diffuseStrength;
 
             // specular
             vec3 viewDir = normalize(viewPos - fragPos);
             vec3 reflectDir = reflect(lightDir, norm);
 
             vec3 specular = specularStrength * pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * specularColor;
+
 
             // Spotlight
             float spotLight_fdir;
@@ -142,12 +146,12 @@
             vec3 pointLightDir = pointLightPos - fragPos; 
             vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength;
 
-
-            //float pointLightIntensity = pointLightReach/(attLinear*length(pointLightDir)+attExp*length(pointLightDir)*length(pointLightDir));
+            float attLinear = 1.0f, attExp = 1.0f;
+            float pointLightDistanceIntensity = pointLightReach / (attLinear*length(pointLightDir)+attExp*length(pointLightDir)*length(pointLightDir));
 
             vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
-            vec3 result = (dirLight + ambient + pointLight + (spotLightColor * spotLight_fdir * spotLight_fdistance) * (diffuse + specular)) * objectColor;
+            vec3 result = (dirLight + ambient + pointLight + spotLightColor*spotLight_fdir*spotLight_fdistance + diffuse + specular )* objectColor;
             fragColor = vec4(result, 1.0);
         }
 </script>
@@ -160,20 +164,24 @@
         onChange: 'update(this, 1)',
     }" >
     <br>
-    Specular light <input id="specularLightColorInput" value="rgba(255,255,255,0.8)" data-jscolor="{
+    Diffuse light <input id="diffuseLightColorInput" value="rgba(255,255,255,0.8)" data-jscolor="{
         onChange: 'update(this, 2)',
     }">
     <br>
-    Spotlight <input id="spotLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
+    Specular light <input id="specularLightColorInput" value="rgba(255,255,255,0.8)" data-jscolor="{
         onChange: 'update(this, 3)',
     }">
     <br>
-    Directional light <input id="dirLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
+    Spotlight <input id="spotLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
         onChange: 'update(this, 4)',
     }">
     <br>
-    Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
+    Directional light <input id="dirLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
         onChange: 'update(this, 5)',
+    }">
+    <br>
+    Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
+        onChange: 'update(this, 6)',
     }">
     <br>
     TODO: ADD SLIDERS HERE FOR OTHER PARAMETERS
@@ -310,8 +318,12 @@
 
         var ambientColor = new Float32Array([1.0, 1.0, 1.0]);
 
+        var diffuseStrength = 0.8;
+        var diffuseColor = new Float32Array([1.0, 1.0, 1.0]);
+
         var specularStrength = 0.8;
         var specularColor = new Float32Array([1.0, 1.0, 1.0]);
+
         var shadowAngle = 0.0;
         var cutOffAngle = 9.0;
         var objectColor = new Float32Array([1.0, 0.5, 0.5]);
@@ -335,12 +347,29 @@
         var pointLightPos = new Float32Array([0.0, 0.0, 0.0]);
         var pointLightColor = new Float32Array([1.0, 1.0, 1.0]);
         var pointLightStrength = new Float32Array([1.0]);
-        var pointLightReach = 400.0;
+        var pointLightReach = 200.0;
 
         shaderProgram.autocatching();
         shaderProgramL.autocatching();
 
         jscolor.trigger('change');
+
+        const cubePositions = [ 
+                [ 0.0, 0.0, 0.0], 
+                [ 4.0, 10.0, -30.0], 
+                [-3.0, -4.4, -5.0], 
+                [-7.6, -4.0, -24.6], 
+                [ 4.8, -0.8, -7.0],
+                [-4.4, 6.0, -14.0], 
+                [ 2.6, -4.0, -5.0], 
+                [ 3.0, 4.0, -5.0], 
+                [ 3.0, 0.4, -3.0], 
+                [-2.6, 2.0, -3.0],
+            ];
+
+        let colorStep = 1 / cubePositions.length;
+        let randomColors = new Float32Array(cubePositions.length)
+        randomColors = randomColors.map(() => Math.random())
 
         // ==========================================================
         // ==================== RENDER FUNC =========================
@@ -398,6 +427,9 @@
             shaderProgram.setUniform1f("ambientStrength", ambientStrength);
             shaderProgram.setUniform3f("ambientColor", ...ambientColor)
 
+            shaderProgram.setUniform1f("diffuseStrength", diffuseStrength);
+            shaderProgram.setUniform3f("diffuseColor", ...diffuseColor)
+
             shaderProgram.setUniform1f("specularStrength", specularStrength);
             shaderProgram.setUniform3f("specularColor", ...specularColor)
 
@@ -449,20 +481,6 @@
             // ***** DRAWING FIRST SHADERS ******
             gl.bindVertexArray(VAO);
 
-            const cubePositions = [ 
-                [ 0.0, 0.0, 0.0], 
-                [ 4.0, 10.0, -30.0], 
-                [-3.0, -4.4, -5.0], 
-                [-7.6, -4.0, -24.6], 
-                [ 4.8, -0.8, -7.0],
-                [-4.4, 6.0, -14.0], 
-                [ 2.6, -4.0, -5.0], 
-                [ 3.0, 4.0, -5.0], 
-                [ 3.0, 0.4, -3.0], 
-                [-2.6, 2.0, -3.0],
-            ];
-            
-            let colorStep = 1 / cubePositions.length;
 
             for(let i = 0; i < cubePositions.length; i ++)
             {
@@ -474,7 +492,7 @@
                 mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
                 shaderProgram.setUniformMat4("model", model);
                 // CUBE COLOR
-                var cubeColor = new Float32Array([colorStep * i, 0 , 1 - colorStep * i]);
+                var cubeColor = new Float32Array([colorStep * i, randomColors[i] , 1 - colorStep * i]);
                 shaderProgram.setUniform3f("objectColor", ...cubeColor);
                 gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
             }
@@ -506,24 +524,30 @@
                     ambientStrength = picker.channel('A')
                 break;
                 case 2:
+                    diffuseColor[0] = picker.channel('R')/255
+                    diffuseColor[1] = picker.channel('G')/255
+                    diffuseColor[2] = picker.channel('B')/255
+                    diffuseStrength = picker.channel('A')
+                break;
+                case 3:
                     specularColor[0] = picker.channel('R')/255
                     specularColor[1] = picker.channel('G')/255
                     specularColor[2] = picker.channel('B')/255
                     specularStrength = picker.channel('A')
                 break;
-                case 3:
+                case 4:
                     spotLightColor[0] = picker.channel('R')/255
                     spotLightColor[1] = picker.channel('G')/255
                     spotLightColor[2] = picker.channel('B')/255
                     spotLightStrength = picker.channel('A')
                 break;
-                case 4:
+                case 5:
                     dirLightColor[0] = picker.channel('R')/255
                     dirLightColor[1] = picker.channel('G')/255
                     dirLightColor[2] = picker.channel('B')/255
                     dirLightStrength = picker.channel('A')
                 break;
-                case 5:
+                case 6:
                     pointLightColor[0] = picker.channel('R')/255
                     pointLightColor[1] = picker.channel('G')/255
                     pointLightColor[2] = picker.channel('B')/255
