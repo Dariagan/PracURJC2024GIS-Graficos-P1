@@ -184,7 +184,6 @@
         onChange: 'update(this, 6)',
     }">
     <br>
-    TODO: ADD SLIDERS HERE FOR OTHER PARAMETERS
     <script src="jscolor.js"></script>
     <script type="text/javascript">    
         var gl = createContext("myCanvas");
@@ -367,10 +366,10 @@
                 [-2.6, 2.0, -3.0],
             ];
 
-        let colorStep = 1 / cubePositions.length;
-        let randomColors = new Float32Array(cubePositions.length)
-        randomColors = randomColors.map(() => Math.random())
 
+        var randomColors = Array.from({ length: 3 }, () => new Float32Array(cubePositions.length).fill().map(() => Math.random()));
+
+        
         // ==========================================================
         // ==================== RENDER FUNC =========================
         // ==========================================================
@@ -492,7 +491,7 @@
                 mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
                 shaderProgram.setUniformMat4("model", model);
                 // CUBE COLOR
-                var cubeColor = new Float32Array([colorStep * i, randomColors[i] , 1 - colorStep * i]);
+                var cubeColor = new Float32Array([randomColors[0][i], randomColors[1][i] , randomColors[2][i]]);
                 shaderProgram.setUniform3f("objectColor", ...cubeColor);
                 gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
             }
