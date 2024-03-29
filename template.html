@@ -144,10 +144,13 @@
             
             // Point light
             vec3 pointLightDir = pointLightPos - fragPos; 
-            vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength;
-
+            
             float attLinear = 1.0f, attExp = 1.0f;
             float pointLightDistanceIntensity = pointLightReach / (attLinear*length(pointLightDir)+attExp*length(pointLightDir)*length(pointLightDir));
+
+            vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength ;//* pointLightDistanceIntensity;
+
+            
 
             vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
@@ -158,17 +161,16 @@
 </head>
 <body>
     <canvas id="myCanvas" width="600 " height="600"></canvas>
-    https://jscolor.com/examples/
     <br>
-    Ambient light <input id="ambientLightColorInput" value="rgba(255,255,255,0.15)" data-jscolor="{
+    Ambient light <input id="ambientLightColorInput" value="rgba(255,255,255,0.06)" data-jscolor="{
         onChange: 'update(this, 1)',
     }" >
     <br>
-    Diffuse light <input id="diffuseLightColorInput" value="rgba(255,255,255,0.8)" data-jscolor="{
+    Diffuse light <input id="diffuseLightColorInput" value="rgba(255,255,255,0.1)" data-jscolor="{
         onChange: 'update(this, 2)',
     }">
     <br>
-    Specular light <input id="specularLightColorInput" value="rgba(255,255,255,0.8)" data-jscolor="{
+    Specular light <input id="specularLightColorInput" value="rgba(255,255,255,0.1)" data-jscolor="{
         onChange: 'update(this, 3)',
     }">
     <br>
@@ -187,8 +189,6 @@
     <script src="jscolor.js"></script>
     <script type="text/javascript">    
         var gl = createContext("myCanvas");
-        // acceder al input value de color: document.getElementById('textbox_id').value 
-        //https://jscolor.com/examples/ ver cómo hacer con event
         //=====================================================
         // ============== Creation geomtry cube ===============
         //=====================================================
@@ -313,14 +313,14 @@
         // ***** LIGHT DATA *****
 
         // OTHER VALUES
-        var ambientStrength = 0.15;
+        var ambientStrength = 0.06;
 
         var ambientColor = new Float32Array([1.0, 1.0, 1.0]);
 
-        var diffuseStrength = 0.8;
+        var diffuseStrength = 0.1;
         var diffuseColor = new Float32Array([1.0, 1.0, 1.0]);
 
-        var specularStrength = 0.8;
+        var specularStrength = 0.1;
         var specularColor = new Float32Array([1.0, 1.0, 1.0]);
 
         var shadowAngle = 0.0;
@@ -480,10 +480,8 @@
             // ***** DRAWING FIRST SHADERS ******
             gl.bindVertexArray(VAO);
 
-
             for(let i = 0; i < cubePositions.length; i ++)
             {
-
                 // MODEL MATRIX
                 const angle = (i + 1.0) / 3.0 *  time  * 100.0;   
                 let model = mat4.create();
