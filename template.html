@@ -147,6 +147,7 @@
             
             float attLinear = 1.0f, attExp = 1.0f;
             float pointLightDistanceIntensity = pointLightReach / (attLinear*length(pointLightDir)+attExp*length(pointLightDir)*length(pointLightDir));
+            //TODO ADJUST NUMERIC VALUES (INTENSITY IS TOO LOW FOR NOW)
 
             vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength ;//* pointLightDistanceIntensity;
 
