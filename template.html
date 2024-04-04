@@ -87,7 +87,7 @@
         uniform vec3 spotLightDirection;
         uniform float spotLightShadowAngle;
         uniform float spotLightCutOffAngle;
-        float spotLightReach = 100.0; // the length of the spotLight
+        uniform float spotLightReach; // the length of the spotLight
         uniform float spotLightStrength; // the intensity of the light
         uniform vec3 spotLightColor;
 
@@ -162,6 +162,8 @@
 </head>
 <body>
     <canvas id="myCanvas" width="600 " height="600"></canvas>
+    <br>
+    ¡El canal alfa del color de la luz determina su intensidad!
     <br>
     Ambient light <input id="ambientLightColorInput" value="rgba(255,255,255,0.06)" data-jscolor="{
         onChange: 'update(this, 1)',
@@ -333,6 +335,7 @@
         var spotLightTarget = new Float32Array([0, 0, 0]);
         var spotLightPosition = cameraPos;
         var spotLightDirection = vec3.create();
+        var spotLightReach = 50.0;
         var spotLightShadowAngle = 0.0;
         var spotLightCutOffAngle = 0.0;        
         var spotLightColor = new Float32Array([1.0, 1.0, 1.0]);
@@ -457,8 +460,9 @@
             spotLightShadowAngle = Math.radians(shadowAngle); 
             spotLightCutOffAngle = Math.radians(cutOffAngle); 
 
-            shaderProgram.setUniform3f("spotLightColor", ...spotLightColor)
+            shaderProgram.setUniform3f("spotLightColor", ...spotLightColor);
             shaderProgram.setUniform1f("spotLightStrength", spotLightStrength);
+            shaderProgram.setUniform1f("spotLightReach", spotLightReach);
             shaderProgram.setUniform3f("spotLightDirection", ...spotLightDirection);
             shaderProgram.setUniform3f("spotLightPosition", ...spotLightPosition);
             shaderProgram.setUniform1f("spotLightShadowAngle", spotLightShadowAngle);
