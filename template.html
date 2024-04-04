@@ -16,7 +16,7 @@
     <script id="shader-vs-light" type="x-shader/x-vertex">#version 300 es
         precision mediump float;        
         layout (location = 0) in vec3 aPos;
-
+        
         uniform UBO {
             mat4 projection;
             mat4 view;
@@ -47,7 +47,7 @@
         layout (location = 0) in vec3 aPos;
         layout (location = 1) in vec3 aNormal;
         layout (location = 2) in vec2 aTexCoord;
-    
+
         uniform UBO {
             mat4 projection;
             mat4 view;
@@ -59,12 +59,15 @@
        
         out vec3 normal;
         out vec3 fragPos;
+        out vec2 vTexCoord;
     
         void main(){
             fragPos = vec3(model * vec4(aPos, 1.0));
             gl_Position = projection * view * model * vec4(aPos, 1.0);
             mat3 normalM = mat3(transpose(inverse(model)));
             normal = normalM * aNormal;
+
+            vTexCoord = aTexCoord;
         }
     </script>
     <script id="shader-fs" type="x-shader/x-fragment">#version 300 es
@@ -73,6 +76,7 @@
         out vec4 fragColor;
         in vec3 normal;
         in vec3 fragPos;
+        in vec2 vTexCoord;
 
         uniform float ambientStrength;
         uniform vec3 ambientColor;
@@ -99,6 +103,10 @@
         uniform vec3 objectColor;
 
         uniform float pointLightReach;
+
+        //textura
+        uniform sampler2D uTexture;
+        
 
         uniform UBO {
             mat4 projection;
@@ -155,41 +163,22 @@
 
             vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
-            vec3 result = (dirLight + ambient + pointLight + spotLightColor*spotLight_fdir*spotLight_fdistance + diffuse + specular )* objectColor;
+            vec3 result = (dirLight + ambient + pointLight + spotLightColor*spotLight_fdir*spotLight_fdistance + diffuse + specular )* objectColor * texture(uTexture, vTexCoord).rgb;
             fragColor = vec4(result, 1.0);
         }
 </script>
 </head>
 <body>
-    <canvas id="myCanvas" width="600 " height="600"></canvas>
-    <br>
-    ¡El canal alfa del color de la luz determina su intensidad!
-    <br>
-    Ambient light <input id="ambientLightColorInput" value="rgba(255,255,255,0.06)" data-jscolor="{
-        onChange: 'update(this, 1)',
-    }" >
-    <br>
-    Diffuse light <input id="diffuseLightColorInput" value="rgba(255,255,255,0.1)" data-jscolor="{
-        onChange: 'update(this, 2)',
-    }">
-    <br>
-    Specular light <input id="specularLightColorInput" value="rgba(255,255,255,0.1)" data-jscolor="{
-        onChange: 'update(this, 3)',
-    }">
-    <br>
-    Spotlight <input id="spotLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
-        onChange: 'update(this, 4)',
-    }">
-    <br>
-    Directional light <input id="dirLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
-        onChange: 'update(this, 5)',
-    }">
-    <br>
-    Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{
-        onChange: 'update(this, 6)',
-    }">
-    <br>
+    <canvas id="myCanvas" width="800 " height="800"></canvas><br>
+    ¡El canal alfa del color de la luz determina su intensidad!<br>
+    Ambient light <input id="ambientLightColorInput" value="rgba(255,255,255,0.06)" data-jscolor="{onChange: 'update(this, 1)',}" ><br>
+    Diffuse light <input id="diffuseLightColorInput" value="rgba(255,255,255,0.1)" data-jscolor="{onChange: 'update(this, 2)',}"><br>
+    Specular light <input id="specularLightColorInput" value="rgba(255,255,255,0.1)" data-jscolor="{onChange: 'update(this, 3)',}"><br>
+    Spotlight <input id="spotLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{onChange: 'update(this, 4)',}"><br>
+    Directional light <input id="dirLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{onChange: 'update(this, 5)',}"><br>
+    Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{onChange: 'update(this, 6)',}"><br>
     <script src="jscolor.js"></script>
+    <script src="controls.js"></script>
     <script type="text/javascript">    
         var gl = createContext("myCanvas");
         //=====================================================
@@ -225,7 +214,6 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         // Unbind the VAO
         gl.bindVertexArray(null);
-
 
         var shaderProgram = new ShaderProgram( );
         shaderProgram.createVertexShader(
@@ -369,11 +357,27 @@
                 [ 3.0, 0.4, -3.0], 
                 [-2.6, 2.0, -3.0],
             ];
-
-
         var randomColors = Array.from({ length: 3 }, () => new Float32Array(cubePositions.length).fill().map(() => Math.random()));
-
         
+        var myTexture = new Image( );
+        var textureID = gl.createTexture( );
+        myTexture.onload = function( )
+        {
+            gl.bindTexture(gl.TEXTURE_2D, textureID);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+            myTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            renderFunc( 0.0 );
+        };        
+        var url = "./resources/image.png"
+        requestCORSIfNotSameOrigin(myTexture, url);
+        myTexture.src = url;
+            
+        function requestCORSIfNotSameOrigin(img, url) {
+        if ((new URL(url, window.location.href)).origin !== window.location.origin) {img.crossOrigin = "";}}
         // ==========================================================
         // ==================== RENDER FUNC =========================
         // ==========================================================
@@ -411,7 +415,15 @@
            
             var view = mat4.create();
 
-            mat4.lookAt(view, cameraPos, camPosFront, cameraUp);            
+            mat4.lookAt(view, cameraPos, camPosFront, cameraUp);     
+            
+            gl.activeTexture( gl.TEXTURE0 );
+            shaderProgram.setUniform1i( "uTexture", 0 );
+            gl.bindTexture( gl.TEXTURE_2D, textureID );
+            ShaderProgram.prototype.setUniform1i = function( unif, value )
+            {
+            gl.uniform1i( this.uniformLocations[ unif ], value );
+            };
 
             // ***** SETTING UBO *****
             gl.bufferSubData(
@@ -517,236 +529,8 @@
             requestAnimationFrame(renderFunc);
         }
 
-        function update(picker, type) {
-            switch (type){
-                case 1:
-                    ambientColor[0] = picker.channel('R')/255
-                    ambientColor[1] = picker.channel('G')/255
-                    ambientColor[2] = picker.channel('B')/255
-                    ambientStrength = picker.channel('A')
-                break;
-                case 2:
-                    diffuseColor[0] = picker.channel('R')/255
-                    diffuseColor[1] = picker.channel('G')/255
-                    diffuseColor[2] = picker.channel('B')/255
-                    diffuseStrength = picker.channel('A')
-                break;
-                case 3:
-                    specularColor[0] = picker.channel('R')/255
-                    specularColor[1] = picker.channel('G')/255
-                    specularColor[2] = picker.channel('B')/255
-                    specularStrength = picker.channel('A')
-                break;
-                case 4:
-                    spotLightColor[0] = picker.channel('R')/255
-                    spotLightColor[1] = picker.channel('G')/255
-                    spotLightColor[2] = picker.channel('B')/255
-                    spotLightStrength = picker.channel('A')
-                break;
-                case 5:
-                    dirLightColor[0] = picker.channel('R')/255
-                    dirLightColor[1] = picker.channel('G')/255
-                    dirLightColor[2] = picker.channel('B')/255
-                    dirLightStrength = picker.channel('A')
-                break;
-                case 6:
-                    pointLightColor[0] = picker.channel('R')/255
-                    pointLightColor[1] = picker.channel('G')/255
-                    pointLightColor[2] = picker.channel('B')/255
-                    pointLightStrength[0] = picker.channel('A')
-                break;
-                default: console.error("type of light's color to update not handled")
-            }
-        }
-        
-        document.addEventListener('keydown', function (event) {
-            /*
-                https://upload.wikimedia.org/wikipedia/commons/1/1b/ASCII-Table-wide.svg
-    
-            */
-           if(event.shiftKey) {
-                switch (event.keyCode) {
-                    // ***** AMBIENT AND SPECULAR ***** 
-                  
-                    // ***** CUBE COLOR *****
-                    case 53: // shift + 5
-                        //amarillo
-                        objectColor[0] = 0.8;
-                        objectColor[1] = 0.8;
-                        objectColor[2] = 0.0;
-                        break;
-                    case 54: // shift + 6
-                        //rojo
-                        objectColor[0] = 1.0;
-                        objectColor[1] = 0.0;
-                        objectColor[2] = 0.0;
-                        break;
-                    case 55: // shift + 7
-                        //blanco
-                        objectColor.fill(1.0)
-                        break;
-                    // ***** CAMERA MOVEMENT *****
-                    // GOING DOWN
-                    case 32 : // shift + space
-                        vec3.subtract(cameraPos, cameraPos, cameraUp.map(x => x * cameraPosSpeed) )     
-                        console.log("camera pos: ", cameraPos)
-                        break;
-
-                    // ***** LIGHT OPENING *****
-                    case 80 : // P
-                        shadowAngle += 2.0;
-                        shadowAngle = Math.min(shadowAngle, cutOffAngle);
-                        
-                        console.log("shadowAngle :",shadowAngle);
-
-                        break;
-                    case 77 : // M
-                        shadowAngle -= 2.0;
-                        shadowAngle = Math.max(shadowAngle, 0.0);
-
-                        console.log("shadowAngle :", shadowAngle);
-                        break;
-                    default :
-                        break;
-                }
-           }
-           // ***** MOVING LIGHT *****
-           else if (event.altKey & event.ctrlKey) { // alt and ctrl to avoid ctrl + s and alt + d (shortcuts of firefox)
-
-                switch (event.keyCode) {
-                    // GOING FORWARD
-                    case 87 : // W
-                    case 90 : // Z
-                    case 38 :// arrow up
-                        vec3.add(lightPos, lightPos, cameraFront.map(x => x*cameraPosSpeed))     
-                        //console.log(" new light position ", lightPos)
-                    break;
-                    // GOING BACKWARD
-                    case 83 : // S
-                    case 40 :// arrow down
-                        vec3.subtract(lightPos, lightPos, cameraFront.map(x => x*cameraPosSpeed))     
-                        //console.log(" new light position ", lightPos)
-                    break;
-                    // GOING LEFT
-                    case 65 : // A
-                    case 81 : // Q
-                    case 37 : // arrow left
-                        var crossProduct = vec3.create();
-                        vec3.cross(crossProduct, cameraFront, cameraUp);
-                        vec3.normalize(crossProduct, crossProduct);
-                        crossProduct = crossProduct.map(x => x*cameraPosSpeed);
-                        vec3.subtract(lightPos, lightPos, crossProduct);
-                        //console.log(" new light position ", lightPos)
-                        break;
-                    // GOING RIGHT
-                    case 68 : // D
-                    case 39 : // arrow right
-                        var crossProduct = vec3.create();
-                        vec3.cross(crossProduct, cameraFront, cameraUp);
-                        vec3.normalize(crossProduct, crossProduct);
-                        crossProduct = crossProduct.map(x => x*cameraPosSpeed);
-                        vec3.add(lightPos, lightPos, crossProduct);
-                        //console.log(" new light position ", lightPos)
-                        break;
-                    // GOING UP
-                    case 32 : // space
-                        break;
-                    // RESET
-                    case 67 : // C
-                        lightPos = startingLightPos
-                        break; 
-                    default :
-                        break;
-                }
-           }
-           else {
-                switch (event.keyCode) {
-                    // ***** CAMERA MOVEMENT *****
-                    // GOING FORWARD
-                    case 87: // W
-                    case 90: // Z
-                    case 38: // arrow up
-                        vec3.add(cameraPos, cameraPos, cameraFront.map(x => x * cameraPosSpeed));  
-                    break;
-                    // GOING BACKWARD
-                    case 83 : // S
-                    case 40 : // arrow down
-                        vec3.subtract(cameraPos, cameraPos, cameraFront.map(x => x * cameraPosSpeed));  
-                        break;
-                    // GOING LEFT
-                    case 65 : // A
-                    case 81 : // Q
-                    case 37 : // arrow left
-                        var crossProduct = vec3.create();
-                        vec3.cross(crossProduct, cameraFront, cameraUp);
-                        vec3.normalize(crossProduct, crossProduct);
-                        crossProduct = crossProduct.map(x => x * cameraPosSpeed);
-                        vec3.subtract(cameraPos, cameraPos, crossProduct);
-                        break;
-                    // GOING RIGHT
-                    case 68 : // D
-                    case 39 : // arrow right
-                        var crossProduct = vec3.create();
-                        vec3.cross(crossProduct, cameraFront, cameraUp);
-                        vec3.normalize(crossProduct, crossProduct);
-                        crossProduct = crossProduct.map(x => x * cameraPosSpeed);
-                        vec3.add(cameraPos, cameraPos, crossProduct);
-                        break;
-                    // GOING UP
-                    case 32 : // space
-                        
-                        vec3.add(cameraPos, cameraPos, cameraUp.map(x => x * cameraPosSpeed))     
-                        break;
-                    // ***** CAMERA RESET *****
-                    case 67 : // C
-                        cameraPos = initialCamPos;
-                        cameraUp = initialCamUp;
-
-                        yaw = -90.0;
-                        pitch = 0.0;
-
-                        break;
-
-                    // ***** SPOTLIGHT OPENING *****
-                    case 80 : // P
-                        cutOffAngle += 2.0;
-                        cutOffAngle = Math.min(180.0, cutOffAngle);
-                        console.log("cutOffAngle :",cutOffAngle);
-
-                        break;
-                    case 77 : // M
-                        cutOffAngle -= 2.0;
-                        cutOffAngle = Math.max(shadowAngle, cutOffAngle);
-                        console.log("cutOffAngle :", cutOffAngle);
-                        break;
-                    default :
-                        break;
-                }
-            }
-        });
-        
-        document.addEventListener('mousemove', (event) => {
-            const {clientX, clientY} = event;
-            const x = clientX;
-            const y = clientY;
-            
-            if (firstMouse){
-                lastMouseX = x;
-                lastMouseY = y;
-                firstMouse = false;
-            }
-            const xoffset = (x - lastMouseX)*cameraRotSpeed;
-            const yoffset = (lastMouseY - y)*cameraRotSpeed; 
-            lastMouseX = x;
-            lastMouseY = y;
-
-            yaw   += xoffset;
-            pitch += yoffset;
-
-            pitch = Math.clamp(pitch, -89.0, 89.0)
-        })
-
         renderFunc(0.0);
-
     </script>
+
+        
 </body>
