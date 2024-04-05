@@ -71,8 +71,11 @@ document.addEventListener('keydown', function (event) {
             case 49 : // shift + 1
                 specularRadius += 1.0;    
             break;
-            case 50 :
+            case 50 : // shift + 2
                 specularRadius -= 1.0;    
+                if ( specularRadius < 1.0) {
+                    specularRadius = 1.0;
+                }
             break;
 
             default :
