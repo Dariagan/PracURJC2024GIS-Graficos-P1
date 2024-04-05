@@ -501,10 +501,10 @@
             for(let i = 0; i < cubePositions.length; i ++)
             {
                 // MODEL MATRIX
-                const cosAngleVecs = (i + 1.0) / 3.0 *  time  * 100.0;   
+                const angle = (i + 1.0) / 3.0 *  time  * 100.0;   
                 let model = mat4.create();
                 mat4.translate(model, model, cubePositions[i]);
-                mat4.rotate(model, model, Math.radians(cosAngleVecs), [1.0, 0.5, 1.0]);
+                mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
                 shaderProgram.setUniformMat4("model", model);
                 // CUBE COLOR
                 var cubeColor = new Float32Array([randomColors[0][i], randomColors[1][i] , randomColors[2][i]]);
