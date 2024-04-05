@@ -55,19 +55,26 @@ document.addEventListener('keydown', function (event) {
                 break;
 
             // ***** LIGHT OPENING *****
-            case 80 : // P
+            case 80 : // shift + P
                 shadowAngle += 2.0;
                 shadowAngle = Math.min(shadowAngle, cutOffAngle);
                 
                 console.log("shadowAngle :",shadowAngle);
 
                 break;
-            case 77 : // M
+            case 77 : // shift + M
                 shadowAngle -= 2.0;
                 shadowAngle = Math.max(shadowAngle, 0.0);
 
                 console.log("shadowAngle :", shadowAngle);
                 break;
+            case 49 : // shift + 1
+                specularRadius += 1.0;    
+            break;
+            case 50 :
+                specularRadius -= 1.0;    
+            break;
+
             default :
                 break;
         }
