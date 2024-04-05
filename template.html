@@ -87,7 +87,7 @@
         uniform float specularStrength;
         uniform vec3 specularColor;
 
-        uniform vec3 spotLightPosition;
+        uniform vec3 cameraPosition;
         uniform vec3 spotLightDirection;
         uniform float spotLightShadowAngle;
         uniform float spotLightCutOffAngle;
@@ -121,9 +121,9 @@
             vec3 ambient = ambientStrength * ambientColor;
 
             // diffuse
-            vec3 lightDir = normalize(spotLightPosition - fragPos);
-            float diff = max(dot(norm, lightDir), 0.0);
-            vec3 diffuse = diff * diffuseColor * diffuseStrength;
+            vec3 lightDir = normalize(cameraPosition - fragPos);
+
+            vec3 diffuse =  max(dot(norm, lightDir), 0.0) * diffuseColor * diffuseStrength;
 
             // specular
             vec3 viewDir = normalize(viewPos - fragPos);
@@ -134,7 +134,7 @@
 
             // Spotlight
             float spotLight_fdir;
-            vec3 L = normalize(spotLightPosition - fragPos);
+            vec3 L = normalize(cameraPosition - fragPos);
             float angle =  dot(-L, spotLightDirection) / (length(-L) * length(spotLightDirection));
             float cosShadowAngle = cos(spotLightShadowAngle);
             float cosCutOffAngle = cos(spotLightCutOffAngle);
@@ -146,7 +146,7 @@
                 }
             else spotLight_fdir = 0.0;
 
-            float distance = length(spotLightPosition - fragPos) / spotLightReach;
+            float distance = length(cameraPosition - fragPos) / spotLightReach;
             float fwin = pow(max(1.0 - pow(distance / spotLightReach, 4.0), 0.0), 2.0);
             float spotLight_fdistance = fwin * pow(spotLightStrength, 2.0) / (pow(distance, 2.0) + 1.0);
             
@@ -158,8 +158,6 @@
             //TODO ADJUST NUMERIC VALUES (INTENSITY IS TOO LOW FOR NOW)
 
             vec3 pointLight = max(dot(norm, normalize(pointLightDir)), 0.0) * pointLightColor * pointLightStrength ;//* pointLightDistanceIntensity;
-
-            
 
             vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
@@ -316,7 +314,6 @@
 
         var shadowAngle = 0.0;
         var cutOffAngle = 9.0;
-        var objectColor = new Float32Array([1.0, 0.5, 0.5]);
         var pointLightColor = new Float32Array([1.0, 1.0, 1.0]);
 
         var spotLightStrength = 1.0;
@@ -465,7 +462,6 @@
             shaderProgram.setUniform1f("dirLightStrength", dirLightStrength);
             shaderProgram.setUniform3f("dirLightDirection", ...dirLightDirection);  
 
-            spotLightPosition = cameraPos;
             spotLightDirection = cameraFront;
             // vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
             // vec3.normalize(spotLightDirection, spotLightDirection);
@@ -476,7 +472,7 @@
             shaderProgram.setUniform1f("spotLightStrength", spotLightStrength);
             shaderProgram.setUniform1f("spotLightReach", spotLightReach);
             shaderProgram.setUniform3f("spotLightDirection", ...spotLightDirection);
-            shaderProgram.setUniform3f("spotLightPosition", ...spotLightPosition);
+            shaderProgram.setUniform3f("cameraPosition", ...cameraPos);
             shaderProgram.setUniform1f("spotLightShadowAngle", spotLightShadowAngle);
             shaderProgram.setUniform1f("spotLightCutOffAngle", spotLightCutOffAngle);
             

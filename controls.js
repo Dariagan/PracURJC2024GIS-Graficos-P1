@@ -46,26 +46,7 @@ document.addEventListener('keydown', function (event) {
 
     */
    if(event.shiftKey) {
-        switch (event.keyCode) {
-            // ***** AMBIENT AND SPECULAR ***** 
-          
-            // ***** CUBE COLOR *****
-            case 53: // shift + 5
-                //amarillo
-                objectColor[0] = 0.8;
-                objectColor[1] = 0.8;
-                objectColor[2] = 0.0;
-                break;
-            case 54: // shift + 6
-                //rojo
-                objectColor[0] = 1.0;
-                objectColor[1] = 0.0;
-                objectColor[2] = 0.0;
-                break;
-            case 55: // shift + 7
-                //blanco
-                objectColor.fill(1.0)
-                break;
+        switch (event.keyCode) {    
             // ***** CAMERA MOVEMENT *****
             // GOING DOWN
             case 32 : // shift + space
