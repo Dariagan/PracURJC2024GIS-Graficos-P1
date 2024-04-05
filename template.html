@@ -136,13 +136,13 @@
             // Spotlight
             float spotLight_fdir;
             vec3 L = normalize(cameraPosition - fragPos);
-            float angle =  dot(-L, spotLightDirection) / (length(-L) * length(spotLightDirection));
+            float cosAngleVecs =  dot(-L, spotLightDirection) / (length(-L) * length(spotLightDirection));
             float cosShadowAngle = cos(spotLightShadowAngle);
             float cosCutOffAngle = cos(spotLightCutOffAngle);
-            if (cosCutOffAngle < angle) 
-                if (cosShadowAngle < angle) spotLight_fdir = 1.0;
+            if (cosCutOffAngle < cosAngleVecs) 
+                if (cosShadowAngle < cosAngleVecs) spotLight_fdir = 1.0;
                 else {
-                    float t = pow((angle - cosCutOffAngle)/(cosShadowAngle - cosCutOffAngle), 0.5);
+                    float t = pow((cosAngleVecs - cosCutOffAngle)/(cosShadowAngle - cosCutOffAngle), 0.5);
                     spotLight_fdir = pow(t, 2.0) * (3.0 - 2.0 * t);
                 }
             else spotLight_fdir = 0.0;
@@ -324,7 +324,7 @@
         var spotLightTarget = new Float32Array([0, 0, 0]);
         var spotLightPosition = cameraPos;
         var spotLightDirection = vec3.create();
-        var spotLightReach = 50.0;
+        var spotLightReach = 35.0;
         var spotLightShadowAngle = 0.0;
         var spotLightCutOffAngle = 0.0;        
         var spotLightColor = new Float32Array([1.0, 1.0, 1.0]);
@@ -501,10 +501,10 @@
             for(let i = 0; i < cubePositions.length; i ++)
             {
                 // MODEL MATRIX
-                const angle = (i + 1.0) / 3.0 *  time  * 100.0;   
+                const cosAngleVecs = (i + 1.0) / 3.0 *  time  * 100.0;   
                 let model = mat4.create();
                 mat4.translate(model, model, cubePositions[i]);
-                mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
+                mat4.rotate(model, model, Math.radians(cosAngleVecs), [1.0, 0.5, 1.0]);
                 shaderProgram.setUniformMat4("model", model);
                 // CUBE COLOR
                 var cubeColor = new Float32Array([randomColors[0][i], randomColors[1][i] , randomColors[2][i]]);
