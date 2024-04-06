@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Practica1 Remi y Stefano </title>
+    <title>Prac1 G30 Remi y Stefano </title>
     <script type="text/javascript" src="auxiliars.js"></script>
     <script type="text/javascript" src="shader.js"></script>
     <script type="text/javascript" src="cube.js"></script>
@@ -11,7 +11,7 @@
         var vec3 = glMatrix.vec3;
         Math.radians = function (degrees) {return degrees * Math.PI / 180;};        
         Math.degrees = function (radians) {return radians * 180 / Math.PI;};
-        Math.clamp = function clamp(num, min, max) { return num <= min ? min : num >= max ? max : num;}
+        Math.clamp = function clamp(num, min, max) {return num <= min ? min : num >= max ? max : num;}
     </script>
     <script id="shader-vs-light" type="x-shader/x-vertex">#version 300 es
         precision mediump float;        
@@ -176,11 +176,11 @@
     Spotlight <input id="spotLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{onChange: 'update(this, 4)',}"><br>
     Directional light <input id="dirLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{onChange: 'update(this, 5)',}"><br>
     Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{onChange: 'update(this, 6)',}"><br>
-    <script src="jscolor.js"></script>
-    <script src="controls.js"></script>
+    <script type="text/javascript" src="jscolor.js"></script>
+    <script type="text/javascript" src="controls.js"></script>
     <script type="text/javascript">
     const initialCamPos = new Float32Array([0.0, 0.0, 20.0]);
-    var initialCamUp = new Float32Array([0.0, 1.0, 0.0]);
+    const initialCamUp = new Float32Array([0.0, 1.0, 0.0]);
     {   
         var gl = createContext("myCanvas");
         //=====================================================
@@ -337,7 +337,7 @@
         const randomColors = Array.from({length: 3}, () => new Float32Array(cubePositions.length).fill().map(() => Math.random()));
 
         const folder = "resources/"
-        const urls = ["guineapig.png", "orangutan.jpg", "cat.png", "cat2.png", "dog.jpg"]
+        const urls = ["guineapig.png", "orangutan.jpg", "cat.png", "cat2.png", "cat3.jpg", "cat4.jpg", "dog.jpg"]
         let texturesIds = new Array(urls.length)
    
         for(let i = 0; i < urls.length; i++){
