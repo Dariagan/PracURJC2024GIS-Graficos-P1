@@ -107,8 +107,8 @@ document.addEventListener('keydown', function (event) {
             
         // ***** CAMERA RESET *****
         case 67: // C
-            cameraPos = initialCamPos;
-            cameraUp = initialCamUp;
+            cameraPos = new Float32Array(initialCamPos);
+            cameraUp = new Float32Array(initialCamUp);
             yaw = -90.0; pitch = 0.0;
             break;
         // ***** SPOTLIGHT OPENING *****
