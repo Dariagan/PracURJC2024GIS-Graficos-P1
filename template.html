@@ -165,7 +165,6 @@
             vec3 dirLight = dot(norm, normalize(-dirLightDirection)) * dirLightColor * dirLightStrength;
 
             fragColor = vec4((ambient + specular + diffuse + spotLight + dirLight + pointLight) * objectColor * texture(uTexture, vTexCoord).rgb, 1.0);
-
         }
 </script>
 </head>
@@ -180,12 +179,15 @@
     Point light <input id="pointLightColorInput" value="rgba(255,255,255,1)" data-jscolor="{onChange: 'update(this, 6)',}"><br>
     <script src="jscolor.js"></script>
     <script src="controls.js"></script>
-    <script type="text/javascript">    
+    <script type="text/javascript">
+    const initialCamPos = new Float32Array([0.0, 0.0, 20.0]);
+    const initialCamUp = new Float32Array([0.0, 1.0, 0.0]);
+    {   
         var gl = createContext("myCanvas");
         //=====================================================
         // ============== Creation geomtry cube ===============
         //=====================================================
-        var VAO, VBO, VBO2, VBO3, VBO4, EBO;
+        let VAO, VBO, VBO2, VBO3, VBO4, EBO;
         VAO = gl.createVertexArray();
         VBO = gl.createBuffer();
         VBO2 = gl.createBuffer();
@@ -216,7 +218,7 @@
         // Unbind the VAO
         gl.bindVertexArray(null);
 
-        var shaderProgram = new ShaderProgram( );
+        let shaderProgram = new ShaderProgram( );
         shaderProgram.createVertexShader(
           document.getElementById( "shader-vs" ).text
         );
@@ -226,16 +228,15 @@
         shaderProgram.compile( );
         shaderProgram.link( );
 
-        // Shaders para la luz
-        var shaderProgramL = new ShaderProgram( );
-        shaderProgramL.createVertexShader(
+        let shaderProgramLightCube = new ShaderProgram( );
+        shaderProgramLightCube.createVertexShader(
           document.getElementById( "shader-vs-light" ).text
         );
-        shaderProgramL.createFragmentShader(
+        shaderProgramLightCube.createFragmentShader(
           document.getElementById( "shader-fs-light" ).text
         );
-        shaderProgramL.compile( );
-        shaderProgramL.link( );
+        shaderProgramLightCube.compile( );
+        shaderProgramLightCube.link( );
 
         var uboBuffer = gl.createBuffer( );
         gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
@@ -263,7 +264,6 @@
             uboVariablesIndices,
             gl.UNIFORM_OFFSET
         );
-
         const uboVariablesInfo = {};
         uboVariablesNames.forEach((name, index) => {
             uboVariablesInfo[ name ] = {
@@ -274,37 +274,15 @@
         let index = gl.getUniformBlockIndex(shaderProgram.mCompiledShader, "UBO");
         gl.uniformBlockBinding(shaderProgram.mCompiledShader, index, 0);
 
-        index = gl.getUniformBlockIndex(shaderProgramL.mCompiledShader, "UBO");
-        gl.uniformBlockBinding(shaderProgramL.mCompiledShader, index, 0);
-
-        // ***** CANVAS DATAS *****
-        let canvas = document.getElementById('myCanvas');
-        canvas.style.cursor = 'none';
-        let rect = canvas.getBoundingClientRect();
-      
+        index = gl.getUniformBlockIndex(shaderProgramLightCube.mCompiledShader, "UBO");
+        gl.uniformBlockBinding(shaderProgramLightCube.mCompiledShader, index, 0);
         
-        // OTHER VALUES
-        var sensibility = 0.5
-        var cameraPosSpeed = sensibility; // in meter per tick
-        var cameraRotSpeed = sensibility / 3; // in meter per tick
-        var yaw = - 90.0; // in degrees
-        var pitch = 0.0; // in degrees
-        var lastMouseX = rect.x / 2; // middle of the canva x value
-        var lastMouseY = rect.y / 2; // middle of the canva y value
-        var firstMouse = true;
-        // CAMERA POSITION VALUES
-        const initialCamPos = new Float32Array([0.0, 0.0, 20.0]);
-
-        // CAMERA UP VALUES
-        var initialCamUp = new Float32Array([0.0, 1.0, 0.0]);
         // VECTORS OF LOOKAT MATRIX
         var cameraPos   = initialCamPos
-        var cameraFront = new Float32Array([ 0.0, 0.0, 0.0]);
+        var cameraFront = new Float32Array([0.0, 0.0, 0.0]);
         var cameraUp    = initialCamUp;
 
-        // ***** LIGHT DATA *****
-
-        // OTHER VALUES
+        // ***** LIGHT SOURCES' VARIABLES *****
         var ambientStrength = 0.06;
 
         var ambientColor = new Float32Array([1.0, 1.0, 1.0]);
@@ -324,25 +302,25 @@
         var spotLightTarget = new Float32Array([0, 0, 0]);
         var spotLightPosition = cameraPos;
         var spotLightDirection = vec3.create();
-        var spotLightReach = 35.0;
+        const spotLightReach = 26.0;
         var spotLightShadowAngle = 0.0;
         var spotLightCutOffAngle = 0.0;        
         var spotLightColor = new Float32Array([1.0, 1.0, 1.0]);
 
+        const dirLightOrbitingSpeed = 0.1;
         var dirLightStrength = 1.0;
         var dirLightColor = new Float32Array([1.0, 1.0, 1.0]);
         var dirLightDirection = new Float32Array([0.0, 0.0, 0.0]);
 
-        // POINT LIGHT
-        const pointLightOrbitingSpeed = 0.9;
+        const pointLightOrbitingSpeed = 0.6;
         const pointLightOrbitRadius = 50;
         var pointLightPos = new Float32Array([0.0, 0.0, 0.0]);
         var pointLightColor = new Float32Array([1.0, 1.0, 1.0]);
         var pointLightStrength = new Float32Array([1.0]);
-        var pointLightReach = 200.0;
+        const pointLightReach = 200.0;
 
         shaderProgram.autocatching();
-        shaderProgramL.autocatching();
+        shaderProgramLightCube.autocatching();
 
         jscolor.trigger('change');
 
@@ -358,12 +336,11 @@
                 [ 3.0, 0.4, -3.0], 
                 [-2.6, 2.0, -3.0],
             ];
-        var randomColors = Array.from({ length: 3 }, () => new Float32Array(cubePositions.length).fill().map(() => Math.random()));
+        const randomColors = Array.from({length: 3}, () => new Float32Array(cubePositions.length).fill().map(() => Math.random()));
         
-        var myTexture = new Image( );
-        var textureID = gl.createTexture( );
-        myTexture.onload = function( )
-        {
+        let myTexture = new Image( );
+        let textureID = gl.createTexture( );
+        myTexture.onload = function(){
             gl.bindTexture(gl.TEXTURE_2D, textureID);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
             myTexture);
@@ -371,14 +348,12 @@
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.generateMipmap(gl.TEXTURE_2D);
             gl.bindTexture(gl.TEXTURE_2D, null);
-            renderFunc( 0.0 );
+            renderFunc(0.0);
         };        
-        var url = "./resources/image.png"
+        const url = "./resources/image.png"
         requestCORSIfNotSameOrigin(myTexture, url);
         myTexture.src = url;
-            
-        function requestCORSIfNotSameOrigin(img, url) {
-        if ((new URL(url, window.location.href)).origin !== window.location.origin) {img.crossOrigin = "";}}
+        function requestCORSIfNotSameOrigin(img, url) {if ((new URL(url, window.location.href)).origin !== window.location.origin) {img.crossOrigin = "";}}
         // ==========================================================
         // ==================== RENDER FUNC =========================
         // ==========================================================
@@ -394,28 +369,27 @@
 
             // ***** CAMERA MATRICES *****
             // PROJ MATRIX
-            var proj = mat4.create();
+            let proj = mat4.create();
             mat4.perspective(proj, Math.radians(60.0), 1.0, 0.001, 1000.0);
 
             // VIEW MATRIX
-            var yawRadians = Math.radians(yaw);
-            var pitchRadians = Math.radians(pitch);
-            var cosYaw = Math.cos(yawRadians);
-            var sinYaw = Math.sin(yawRadians);
-            var cosPitch = Math.cos(pitchRadians);
-            var sinPitch = Math.sin(pitchRadians);
+            const yawRadians = Math.radians(yaw);
+            const pitchRadians = Math.radians(pitch);
+            const cosYaw = Math.cos(yawRadians);
+            const sinYaw = Math.sin(yawRadians);
+            const cosPitch = Math.cos(pitchRadians);
+            const sinPitch = Math.sin(pitchRadians);
            
-            var direction = vec3.create();
+            let direction = vec3.create();
             direction[0] = cosYaw * cosPitch;
             direction[1] = sinPitch;
             direction[2] = sinYaw * cosPitch;
             vec3.normalize(cameraFront, direction);
 
-            var camPosFront = vec3.create();
+            let camPosFront = vec3.create();
             vec3.add(camPosFront, cameraPos, cameraFront);
            
-            var view = mat4.create();
-
+            let view = mat4.create();
             mat4.lookAt(view, cameraPos, camPosFront, cameraUp);     
             
             gl.activeTexture( gl.TEXTURE0 );
@@ -451,16 +425,14 @@
             shaderProgram.setUniform1f("specularRadius", specularRadius)
 
             //***** POINT LIGHT ORBITING *****
-            
             pointLightPos[0] = pointLightOrbitRadius * Math.cos(time * pointLightOrbitingSpeed);
             pointLightPos[1] = 0.0;
             pointLightPos[2] = pointLightOrbitRadius * Math.sin(time * pointLightOrbitingSpeed);
 
             // DIRECTIONAL LIGHT ORBITING
-            const orbitingSpeed = 0.1;
-
-            dirLightDirection[0] = Math.cos(time*orbitingSpeed);
-            dirLightDirection[1] = Math.sin(time*orbitingSpeed);
+            
+            dirLightDirection[0] = Math.cos(time*dirLightOrbitingSpeed);
+            dirLightDirection[1] = Math.sin(time*dirLightOrbitingSpeed);
             dirLightDirection[2] = 0;
 
             shaderProgram.setUniform3f("dirLightColor", ...dirLightColor)
@@ -468,8 +440,6 @@
             shaderProgram.setUniform3f("dirLightDirection", ...dirLightDirection);  
 
             spotLightDirection = cameraFront;
-            // vec3.subtract(spotLightDirection, spotLightTarget, spotLightPosition);
-            // vec3.normalize(spotLightDirection, spotLightDirection);
             spotLightShadowAngle = Math.radians(shadowAngle); 
             spotLightCutOffAngle = Math.radians(cutOffAngle); 
 
@@ -501,19 +471,18 @@
             for(let i = 0; i < cubePositions.length; i ++)
             {
                 // MODEL MATRIX
-                const angle = (i + 1.0) / 3.0 *  time  * 100.0;   
+                const angle = (i + 1.0) / 3.0 * time * 100.0;   
                 let model = mat4.create();
                 mat4.translate(model, model, cubePositions[i]);
                 mat4.rotate(model, model, Math.radians(angle), [1.0, 0.5, 1.0]);
                 shaderProgram.setUniformMat4("model", model);
-                // CUBE COLOR
-                var cubeColor = new Float32Array([randomColors[0][i], randomColors[1][i] , randomColors[2][i]]);
+
+                const cubeColor = new Float32Array([randomColors[0][i], randomColors[1][i] , randomColors[2][i]]);
                 shaderProgram.setUniform3f("objectColor", ...cubeColor);
                 gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
             }
-
             // ***** LIGHT SQUARES *****
-            shaderProgramL.bind();
+            shaderProgramLightCube.bind();
 
             // MODEL MATRIX
             let modelLight = mat4.create();
@@ -521,7 +490,7 @@
             mat4.scale(modelLight, modelLight, [0.25, 0.25, 0.25]);
             mat4.rotate(modelLight, modelLight, Math.radians(time * 100.0), [-1.0, -0.5, -1.0]);
 
-            shaderProgramL.setUniformMat4("model", modelLight);
+            shaderProgramLightCube.setUniformMat4("model", modelLight);
           
             //***** DRAWING  ******
             gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);
@@ -529,9 +498,6 @@
             gl.bindVertexArray(null);
             requestAnimationFrame(renderFunc);
         }
-
         renderFunc(0.0);
-    </script>
-
-        
+    }</script>
 </body>

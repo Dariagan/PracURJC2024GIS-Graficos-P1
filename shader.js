@@ -7,12 +7,12 @@ var ShaderProgram = function( )
 };
 ShaderProgram.prototype.createVertexShader = function( source )
 {
-	var shader = this.loadAndCompile( source, gl.VERTEX_SHADER );
+	let shader = this.loadAndCompile( source, gl.VERTEX_SHADER );
 	this.shaders.push(shader);
 };
 ShaderProgram.prototype.createFragmentShader = function( source )
 {
-	var shader = this.loadAndCompile( source, gl.FRAGMENT_SHADER );
+	let shader = this.loadAndCompile( source, gl.FRAGMENT_SHADER );
 	this.shaders.push(shader);
 };
 ShaderProgram.prototype.loadAndCompile = function( shaderSource, shaderType )
@@ -27,7 +27,7 @@ ShaderProgram.prototype.loadAndCompile = function( shaderSource, shaderType )
 };
 ShaderProgram.prototype.compileShader = function(shaderSource, shaderType)
 {
-	var compiledShader;
+	let compiledShader;
 	if (shaderType == gl.VERTEX_SHADER)
 	{
 		this.vertexSource = shaderSource;
@@ -55,7 +55,7 @@ ShaderProgram.prototype.compile = function( )
 {
 	// Creamos y linkamos shaders
 	this.mCompiledShader = gl.createProgram();
-	for (var i = 0; i < this.shaders.length; i++)
+	for (let i = 0; i < this.shaders.length; i++)
 	{
 		gl.attachShader(this.mCompiledShader, this.shaders[i]);
 	}
@@ -100,27 +100,24 @@ ShaderProgram.prototype.setUniform1f = function( unif, value )
 
 ShaderProgram.prototype.autocatching = function( )
 {
-	var result = {
+	let result = {
         uniforms: [],
         attributeCount: 0,
         uniformCount: 0
     };
-    var activeUniforms = gl.getProgramParameter(this.mCompiledShader, gl.ACTIVE_UNIFORMS);
-    for (var i=0; i < activeUniforms; i++) {
-        var uniform = gl.getActiveUniform(this.mCompiledShader, i);
+    let activeUniforms = gl.getProgramParameter(this.mCompiledShader, gl.ACTIVE_UNIFORMS);
+    for (let i=0; i < activeUniforms; i++) {
+        let uniform = gl.getActiveUniform(this.mCompiledShader, i);
 
-        var len = gl.getActiveUniforms(this.mCompiledShader, [i], gl.UNIFORM_SIZE);
+        let len = gl.getActiveUniforms(this.mCompiledShader, [i], gl.UNIFORM_SIZE);
         if( len > 1 )
         {
-        	for( var j = 0; j < len; ++j )
+        	for( let j = 0; j < len; ++j )
         	{
         		this.createUniform( uniform.name.slice( 0, -2) + j + "]" );
         	}
         }
-        else
-        {
-        	this.createUniform( uniform.name );
-        }
+        else this.createUniform( uniform.name );
+        
     }
-    console.log( result );
 };
